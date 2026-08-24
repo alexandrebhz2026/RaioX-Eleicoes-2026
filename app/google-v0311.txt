@@ -1,0 +1,1 @@
+Google login on explicit tap only.
