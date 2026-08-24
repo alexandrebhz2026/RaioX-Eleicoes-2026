@@ -28,12 +28,36 @@ async function enableQuickAccess(session){if(!session?.refreshToken)throw new Er
 async function restoreQuickAccess(){const S=await secure();const enabled=await S.getItemAsync(ENABLED_KEY);if(enabled!=='1')return null;const token=await S.getItemAsync(TOKEN_KEY,{requireAuthentication:true,authenticationPrompt:'Use sua biometria / Face ID para entrar no RAIO-X'});if(!token)return null;const session=await refreshFirebase(token);await saveProfile(session);return session;}
 
 function GoogleMark(){return <View style={s.gMark}><View style={[s.gQuad,{left:0,top:0,backgroundColor:'#4285F4'}]}/><View style={[s.gQuad,{right:0,top:0,backgroundColor:'#EA4335'}]}/><View style={[s.gQuad,{left:0,bottom:0,backgroundColor:'#34A853'}]}/><View style={[s.gQuad,{right:0,bottom:0,backgroundColor:'#FBBC05'}]}/><View style={s.gInner}/><View style={s.gBar}/></View>}
-function XisMascot({small=false,heart=false}){const scale=small?.72:1;return <View style={[s.xisWrap,{transform:[{scale}],marginVertical:small?-12:0}]}><View style={s.xisGlow}/><View style={s.xisHelmet}><View style={s.xisFace}><View style={s.xisEyeOpen}><View style={s.xisEyeCore}/></View><View style={s.xisWink}/><View style={s.xisSmile}/></View></View><View style={s.xisBody}><Text style={s.xisX}>X</Text></View><View style={s.xisArmLeft}/><View style={s.xisThumb}><Text style={s.thumbText}>👍</Text></View>{heart?<Text style={s.heart}>♥</Text>:null}</View>}
+function XisMascot({small=false,heart=false}){const scale=small?0.72:1;return <View style={[s.xisWrap,{transform:[{scale}],marginVertical:small?-12:0}]}><View style={s.xisGlow}/><View style={s.xisHelmet}><View style={s.xisFace}><View style={s.xisEyeOpen}><View style={s.xisEyeCore}/></View><View style={s.xisWink}/><View style={s.xisSmile}/></View></View><View style={s.xisBody}><Text style={s.xisX}>X</Text></View><View style={s.xisArmLeft}/><View style={s.xisThumb}><Text style={s.thumbText}>👍</Text></View>{heart?<Text style={s.heart}>♥</Text>:null}</View>}
 function TrustRow(){return <View style={s.trustRow}><View style={s.trustItem}><Text style={s.trustIcon}>⌾</Text><Text style={s.trustTitle}>Seguro</Text><Text style={s.trustSub}>acesso protegido</Text></View><View style={s.trustItem}><Text style={s.trustIcon}>▣</Text><Text style={s.trustTitle}>Privado</Text><Text style={s.trustSub}>pesquisas com você</Text></View><View style={s.trustItem}><Text style={s.trustIcon}>✓</Text><Text style={s.trustTitle}>Confiável</Text><Text style={s.trustSub}>dados oficiais</Text></View></View>}
 
 export default function PremiumAuthGate({setSession}){
  const [mode,setMode]=useState('choice'),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[booting,setBooting]=useState(true),[quickAvailable,setQuickAvailable]=useState(false),[pending,setPending]=useState(null),[offer,setOffer]=useState(false);
- useEffect(()=>{let alive=true;(async()=>{try{const enabled=await readPlain(ENABLED_KEY);if(!alive)return;if(enabled==='1'){setQuickAvailable(true);try{const restored=await restoreQuickAccess();if(restored&&alive){await syncUserProfile(restored);setSession(restored);return;}}catch(e){if(alive)setMessage('Acesso rápido não concluído. Você pode tentar de novo ou usar seu login.');}}finally{if(alive)setBooting(false);}})();return()=>{alive=false};},[setSession]);
+ useEffect(()=>{
+   let alive=true;
+   (async()=>{
+     try{
+       const enabled=await readPlain(ENABLED_KEY);
+       if(!alive)return;
+       if(enabled==='1'){
+         setQuickAvailable(true);
+         try{
+           const restored=await restoreQuickAccess();
+           if(restored&&alive){
+             await syncUserProfile(restored);
+             setSession(restored);
+             return;
+           }
+         }catch(e){
+           if(alive)setMessage('Acesso rápido não concluído. Você pode tentar de novo ou usar seu login.');
+         }
+       }
+     }finally{
+       if(alive)setBooting(false);
+     }
+   })();
+   return()=>{alive=false};
+ },[setSession]);
  async function finishLogin(next){await syncUserProfile(next);const seen=await readPlain(OFFER_SEEN_KEY);if(next.refreshToken&&seen!=='1'){setPending(next);setOffer(true);return;}setSession(next);}
  async function submitEmail(register){if(busy)return;setMessage('');if(!email.includes('@')||password.length<6){setMessage('Informe um e-mail válido e uma senha com pelo menos 6 caracteres.');return;}setBusy(true);try{const next=await firebaseEmailAuth(email,password,register);await finishLogin(next);}catch(e){setMessage(e?.message||'Não foi possível entrar.');}finally{setBusy(false);}}
  async function submitGoogle(){if(busy)return;setBusy(true);setMessage('');try{const next=await signInWithGoogle();await finishLogin(next);}catch(e){setMessage(e?.message||'Não foi possível entrar com Google.');}finally{setBusy(false);}}
