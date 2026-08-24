@@ -1,4 +1,4 @@
-name: Build RAIO-X v0.3.10 Search Login
+name: Build RAIO-X v0.3.11 Google Login
 
 on:
   pull_request:
@@ -27,19 +27,21 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Verify v0.3.10 search and safe login
+      - name: Verify v0.3.11 search and isolated Google login
         working-directory: app
         run: |
-          grep -q '"version": "0.3.10"' app.json
-          grep -q '"versionCode": 14' app.json
-          grep -q 'v0.3.10' App.js
+          grep -q '"version": "0.3.11"' app.json
+          grep -q '"versionCode": 15' app.json
+          grep -q 'googleServicesFile' app.json
+          grep -q '@react-native-google-signin/google-signin' package.json
+          grep -q 'v0.3.11' App.js
           grep -q 'PAGE_SIZE=30' App.js
           grep -q 'Carregar mais' App.js
-          grep -q 'accounts:${endpoint}' App.js
-          grep -q 'function Account' App.js
-          if grep -q '@react-native-google-signin' App.js; then echo 'Google native module must stay out of startup-safe build'; exit 1; fi
-          if grep -q 'expo-local-authentication' App.js; then echo 'Biometric native module must stay out of startup-safe build'; exit 1; fi
-          if grep -q 'firebase/auth' App.js; then echo 'Firebase JS auth must stay out of startup-safe build'; exit 1; fi
+          grep -q 'Continuar com Google' App.js
+          grep -q "require('@react-native-google-signin/google-signin')" GoogleLogin.js
+          grep -q 'accounts:signInWithIdp' GoogleLogin.js
+          if grep -q 'firebase/auth' App.js GoogleLogin.js; then echo 'Firebase JS auth must stay out'; exit 1; fi
+          if grep -q 'expo-local-authentication' App.js GoogleLogin.js; then echo 'Biometric module must stay out'; exit 1; fi
 
       - name: Generate TSE snapshot
         working-directory: app
@@ -58,6 +60,13 @@ jobs:
           CI: '1'
         run: npx expo prebuild --platform android --clean
 
+      - name: Verify Google native wiring
+        working-directory: app
+        run: |
+          test -s android/app/google-services.json
+          grep -R -q 'com.google.gms.google-services' android || true
+          test -s google-services.json
+
       - name: Build release APK
         working-directory: app/android
         env:
@@ -72,13 +81,13 @@ jobs:
         run: |
           APK="app/android/app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
-          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.10.apk
-          sha256sum RAIO-X-Eleicoes-2026-v0.3.10.apk
+          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.11.apk
+          sha256sum RAIO-X-Eleicoes-2026-v0.3.11.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: RAIO-X-Eleicoes-2026-v0.3.10-APK
-          path: RAIO-X-Eleicoes-2026-v0.3.10.apk
+          name: RAIO-X-Eleicoes-2026-v0.3.11-APK
+          path: RAIO-X-Eleicoes-2026-v0.3.11.apk
           if-no-files-found: error
           retention-days: 14
