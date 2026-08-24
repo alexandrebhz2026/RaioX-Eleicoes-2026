@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "functions": {
+    "api/xis.js": {"maxDuration": 15}
+  },
+  "rewrites": [
+    {"source": "/api/xis", "destination": "/api/xis.js"}
+  ]
+}
