@@ -40,6 +40,7 @@ export async function signInWithGoogle(){
     return {
       uid:data.localId||'',
       idToken:data.idToken||'',
+      refreshToken:data.refreshToken||'',
       email:data.email||'',
       name:data.displayName||'',
       photoURL:data.photoUrl||'',
