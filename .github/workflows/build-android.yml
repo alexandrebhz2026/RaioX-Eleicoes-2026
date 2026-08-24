@@ -29,19 +29,22 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Verify crash-safe REST auth v0.3.7 source
+      - name: Verify RAIO-X v0.3.15 source
         working-directory: app
         run: |
-          grep -q '"version": "0.3.7"' app.json
-          grep -q '"versionCode": 11' app.json
+          grep -q '"version": "0.3.15"' app.json
+          grep -q '"versionCode": 19' app.json
           grep -q 'googleServicesFile' app.json
           grep -q '@react-native-google-signin/google-signin' package.json
-          if grep -q '"firebase"' package.json; then echo 'Firebase JS SDK must not be bundled in v0.3.7'; exit 1; fi
+          grep -q "from './XisEngine'" App.js
+          grep -q "HOURLY_LIMIT=10" XisEngine.js
+          grep -q "DAILY_LIMIT=25" XisEngine.js
+          grep -q "/api/xis" XisEngine.js
+          if grep -q '"firebase"' package.json; then echo 'Firebase JS SDK must not be bundled'; exit 1; fi
           grep -q 'identitytoolkit.googleapis.com' AuthGate.js
           grep -q 'firestore.googleapis.com' AuthGate.js
           grep -q "require('@react-native-google-signin/google-signin')" AuthGate.js
           if grep -q "from 'firebase/" AuthGate.js; then echo 'Unsafe Firebase JS import found'; exit 1; fi
-          grep -q '982564347981-p5do7903lh1e5a7perh9bv5i1ek8rllh.apps.googleusercontent.com' google-services.json
 
       - name: Generate audited TSE snapshot and official photos
         working-directory: app
@@ -82,14 +85,14 @@ jobs:
           APK="app/android/app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           unzip -l "$APK" | grep -E 'index.android.bundle|assets/.+\.bundle'
-          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.7.apk
-          sha256sum RAIO-X-Eleicoes-2026-v0.3.7.apk
-          ls -lh RAIO-X-Eleicoes-2026-v0.3.7.apk
+          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.15.apk
+          sha256sum RAIO-X-Eleicoes-2026-v0.3.15.apk
+          ls -lh RAIO-X-Eleicoes-2026-v0.3.15.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: RAIO-X-Eleicoes-2026-v0.3.7-APK
-          path: RAIO-X-Eleicoes-2026-v0.3.7.apk
+          name: RAIO-X-Eleicoes-2026-v0.3.15-APK
+          path: RAIO-X-Eleicoes-2026-v0.3.15.apk
           if-no-files-found: error
           retention-days: 14
