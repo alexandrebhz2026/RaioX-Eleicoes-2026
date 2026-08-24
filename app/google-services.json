@@ -12,7 +12,20 @@
           "package_name": "com.raiox2026.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "982564347981-p5do7903lh1e5a7perh9bv5i1ek8rllh.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.raiox2026.app",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "982564347981-84aee90mkmb27e7f4bv1m7g6nkeqlkmq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAmnbDT48iQW8SpxUZyTQh__HwM0yWgOwY"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "982564347981-84aee90mkmb27e7f4bv1m7g6nkeqlkmq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
