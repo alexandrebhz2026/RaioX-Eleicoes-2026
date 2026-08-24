@@ -27,10 +27,6 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Apply mandatory login gate
-        working-directory: app
-        run: python3 build_patch_v0312.py
-
       - name: Verify v0.3.12 mandatory login
         working-directory: app
         run: |
@@ -39,9 +35,10 @@ jobs:
           grep -q '"version": "0.3.12"' package.json
           grep -q 'googleServicesFile' app.json
           grep -q '@react-native-google-signin/google-signin' package.json
-          grep -q 'v0.3.12' App.js
-          grep -q 'if(!session)return <SafeAreaView' App.js
-          grep -q 'Valide sua conta para acessar o RAIO-X' App.js
+          grep -q "const APP_VERSION='0.3.12'" App.js
+          grep -q 'if(!session)' App.js
+          grep -q 'ACESSO OBRIGATÓRIO' App.js
+          grep -q 'Todos os usuários precisam se autenticar antes de acessar' App.js
           grep -q 'PAGE_SIZE=30' App.js
           grep -q 'Carregar mais' App.js
           grep -q 'Continuar com Google' App.js
