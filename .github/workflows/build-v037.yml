@@ -1,4 +1,4 @@
-name: Build RAIO-X v0.3.8 Safe Area
+name: Build RAIO-X v0.3.9 Compare
 
 on:
   pull_request:
@@ -27,14 +27,16 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Verify v0.3.8 safe area
+      - name: Verify v0.3.9 evolution
         working-directory: app
         run: |
-          grep -q '"version": "0.3.8"' app.json
-          grep -q '"versionCode": 12' app.json
+          grep -q '"version": "0.3.9"' app.json
+          grep -q '"versionCode": 13' app.json
           grep -q 'react-native-safe-area-context' package.json
-          grep -q 'SafeAreaProvider' index.js
-          grep -q 'v0.3.8' App.js
+          grep -q 'v0.3.9' App.js
+          grep -q 'function Compare' App.js
+          grep -q 'Veja o que os dados mostram' App.js
+          if grep -q 'heroBrand' App.js; then echo 'Duplicate home brand style still present'; exit 1; fi
 
       - name: Generate TSE snapshot
         working-directory: app
@@ -67,13 +69,13 @@ jobs:
         run: |
           APK="app/android/app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
-          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.8.apk
-          sha256sum RAIO-X-Eleicoes-2026-v0.3.8.apk
+          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.9.apk
+          sha256sum RAIO-X-Eleicoes-2026-v0.3.9.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: RAIO-X-Eleicoes-2026-v0.3.8-APK
-          path: RAIO-X-Eleicoes-2026-v0.3.8.apk
+          name: RAIO-X-Eleicoes-2026-v0.3.9-APK
+          path: RAIO-X-Eleicoes-2026-v0.3.9.apk
           if-no-files-found: error
           retention-days: 14
