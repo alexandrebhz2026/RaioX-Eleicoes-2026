@@ -1,10 +1,10 @@
 import React from 'react';
 import {registerRootComponent} from 'expo';
+import {SafeAreaProvider, initialWindowMetrics} from 'react-native-safe-area-context';
 import App from './App';
-import AuthGate from './AuthGate';
 
 function Root(){
-  return <AuthGate><App /></AuthGate>;
+  return <SafeAreaProvider initialMetrics={initialWindowMetrics}><App /></SafeAreaProvider>;
 }
 
 registerRootComponent(Root);
