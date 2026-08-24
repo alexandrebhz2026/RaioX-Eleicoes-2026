@@ -29,13 +29,16 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Verify crash-safe v0.3.4 source
+      - name: Verify Firebase Google-auth v0.3.5 source
         working-directory: app
         run: |
-          grep -q '"version": "0.3.4"' app.json
-          grep -q '"versionCode": 8' app.json
-          grep -q 'Versão de teste v0.3.4' AuthGate.js
-          if grep -q 'useAuthRequest' AuthGate.js; then echo 'Unsafe social auth hook found'; exit 1; fi
+          grep -q '"version": "0.3.5"' app.json
+          grep -q '"versionCode": 9' app.json
+          grep -q 'googleServicesFile' app.json
+          grep -q '@react-native-google-signin/google-signin' package.json
+          grep -q 'GoogleSignin' AuthGate.js
+          grep -q 'google.com' AuthGate.js
+          grep -q '982564347981-p5do7903lh1e5a7perh9bv5i1ek8rllh.apps.googleusercontent.com' google-services.json
 
       - name: Generate audited TSE snapshot and official photos
         working-directory: app
@@ -55,6 +58,12 @@ jobs:
           CI: '1'
         run: npx expo prebuild --platform android --clean
 
+      - name: Verify Google Services native wiring
+        working-directory: app
+        run: |
+          test -s android/app/google-services.json
+          grep -q 'com.raiox2026.app' android/app/google-services.json
+
       - name: Build release APK
         working-directory: app/android
         env:
@@ -70,14 +79,14 @@ jobs:
           APK="app/android/app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           unzip -l "$APK" | grep -E 'index.android.bundle|assets/.+\.bundle'
-          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.4.apk
-          sha256sum RAIO-X-Eleicoes-2026-v0.3.4.apk
-          ls -lh RAIO-X-Eleicoes-2026-v0.3.4.apk
+          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.5.apk
+          sha256sum RAIO-X-Eleicoes-2026-v0.3.5.apk
+          ls -lh RAIO-X-Eleicoes-2026-v0.3.5.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: RAIO-X-Eleicoes-2026-v0.3.4-APK
-          path: RAIO-X-Eleicoes-2026-v0.3.4.apk
+          name: RAIO-X-Eleicoes-2026-v0.3.5-APK
+          path: RAIO-X-Eleicoes-2026-v0.3.5.apk
           if-no-files-found: error
           retention-days: 14
