@@ -8,6 +8,7 @@
     "userInterfaceStyle": "dark",
     "backgroundColor": "#061329",
     "icon": "./assets/raiox-icon.png",
+    "extra": {"xisUi": "official-v019", "xisAiPolicy": "local-tse-cache-ai"},
     "plugins": [
       "@react-native-google-signin/google-signin",
       ["expo-local-authentication", {"faceIDPermission": "Use o Face ID para entrar com segurança no RAIO-X Eleições 2026."}],
