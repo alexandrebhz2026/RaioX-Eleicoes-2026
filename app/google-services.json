@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "982564347981",
+    "project_id": "raioxeleicoes2026",
+    "storage_bucket": "raioxeleicoes2026.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:982564347981:android:b4cdbb08002ed98226fc04",
+        "android_client_info": {
+          "package_name": "com.raiox2026.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAmnbDT48iQW8SpxUZyTQh__HwM0yWgOwY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
