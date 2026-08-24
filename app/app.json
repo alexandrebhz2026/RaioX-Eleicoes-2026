@@ -2,11 +2,12 @@
   "expo": {
     "name": "RAIO-X Eleições 2026",
     "slug": "raio-x-eleicoes-2026",
-    "version": "0.3.13",
+    "version": "0.3.14",
     "scheme": "raiox2026",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#061329",
+    "icon": "./assets/raiox-icon.png",
     "plugins": [
       "@react-native-google-signin/google-signin",
       ["expo-local-authentication", {"faceIDPermission": "Use o Face ID para entrar com segurança no RAIO-X Eleições 2026."}],
@@ -19,9 +20,13 @@
     },
     "android": {
       "package": "com.raiox2026.app",
-      "versionCode": 17,
+      "versionCode": 18,
       "googleServicesFile": "./google-services.json",
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/raiox-icon.png",
+        "backgroundColor": "#061329"
+      }
     },
     "androidStatusBar": {"barStyle": "light-content", "backgroundColor": "#061329", "translucent": false},
     "androidNavigationBar": {"backgroundColor": "#07162D", "barStyle": "light-content", "enforceContrast": false}
