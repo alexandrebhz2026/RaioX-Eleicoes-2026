@@ -29,14 +29,14 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Verify crash-safe REST auth v0.3.6 source
+      - name: Verify crash-safe REST auth v0.3.7 source
         working-directory: app
         run: |
-          grep -q '"version": "0.3.6"' app.json
-          grep -q '"versionCode": 10' app.json
+          grep -q '"version": "0.3.7"' app.json
+          grep -q '"versionCode": 11' app.json
           grep -q 'googleServicesFile' app.json
           grep -q '@react-native-google-signin/google-signin' package.json
-          if grep -q '"firebase"' package.json; then echo 'Firebase JS SDK must not be bundled in v0.3.6'; exit 1; fi
+          if grep -q '"firebase"' package.json; then echo 'Firebase JS SDK must not be bundled in v0.3.7'; exit 1; fi
           grep -q 'identitytoolkit.googleapis.com' AuthGate.js
           grep -q 'firestore.googleapis.com' AuthGate.js
           grep -q "require('@react-native-google-signin/google-signin')" AuthGate.js
@@ -82,14 +82,14 @@ jobs:
           APK="app/android/app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           unzip -l "$APK" | grep -E 'index.android.bundle|assets/.+\.bundle'
-          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.6.apk
-          sha256sum RAIO-X-Eleicoes-2026-v0.3.6.apk
-          ls -lh RAIO-X-Eleicoes-2026-v0.3.6.apk
+          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.7.apk
+          sha256sum RAIO-X-Eleicoes-2026-v0.3.7.apk
+          ls -lh RAIO-X-Eleicoes-2026-v0.3.7.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: RAIO-X-Eleicoes-2026-v0.3.6-APK
-          path: RAIO-X-Eleicoes-2026-v0.3.6.apk
+          name: RAIO-X-Eleicoes-2026-v0.3.7-APK
+          path: RAIO-X-Eleicoes-2026-v0.3.7.apk
           if-no-files-found: error
           retention-days: 14
