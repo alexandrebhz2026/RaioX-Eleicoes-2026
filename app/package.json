@@ -1,12 +1,13 @@
 {
   "name": "raiox-eleicoes-2026",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "private": true,
   "main": "index.js",
   "scripts": {"android":"expo start --android"},
   "dependencies": {
     "expo": "~56.0.5",
     "react": "19.2.3",
-    "react-native": "0.86.0"
+    "react-native": "0.86.0",
+    "react-native-safe-area-context": "~5.7.0"
   }
 }
