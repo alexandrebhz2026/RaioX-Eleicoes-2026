@@ -1,0 +1,47 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    match /users/{userId} {
+      // Cada usuário pode ver o próprio cadastro; administradores podem listar todos.
+      allow get: if signedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+
+      // O usuário só pode criar o próprio documento.
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.uid == request.auth.uid;
+
+      // O usuário pode atualizar o próprio perfil, mas não trocar o UID.
+      allow update: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.uid == resource.data.uid;
+
+      // Necessário para exclusão da própria conta/dados.
+      allow delete: if signedIn() && request.auth.uid == userId;
+    }
+
+    match /admins/{adminId} {
+      // O cliente pode apenas verificar se a própria conta é admin.
+      // Criação/alteração de administradores é feita manualmente no Console
+      // ou por ambiente privilegiado, nunca pelo app comum.
+      allow get: if signedIn() && request.auth.uid == adminId;
+      allow list, create, update, delete: if false;
+    }
+
+    // Tudo que não estiver explicitamente permitido acima fica bloqueado.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
