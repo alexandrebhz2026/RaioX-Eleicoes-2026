@@ -1,4 +1,4 @@
-name: Build RAIO-X v0.3.11 Google Login
+name: Build RAIO-X v0.3.12 Mandatory Login
 
 on:
   pull_request:
@@ -27,14 +27,21 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Verify v0.3.11 search and isolated Google login
+      - name: Apply mandatory login gate
+        working-directory: app
+        run: python3 build_patch_v0312.py
+
+      - name: Verify v0.3.12 mandatory login
         working-directory: app
         run: |
-          grep -q '"version": "0.3.11"' app.json
-          grep -q '"versionCode": 15' app.json
+          grep -q '"version": "0.3.12"' app.json
+          grep -q '"versionCode": 16' app.json
+          grep -q '"version": "0.3.12"' package.json
           grep -q 'googleServicesFile' app.json
           grep -q '@react-native-google-signin/google-signin' package.json
-          grep -q 'v0.3.11' App.js
+          grep -q 'v0.3.12' App.js
+          grep -q 'if(!session)return <SafeAreaView' App.js
+          grep -q 'Valide sua conta para acessar o RAIO-X' App.js
           grep -q 'PAGE_SIZE=30' App.js
           grep -q 'Carregar mais' App.js
           grep -q 'Continuar com Google' App.js
@@ -64,7 +71,6 @@ jobs:
         working-directory: app
         run: |
           test -s android/app/google-services.json
-          grep -R -q 'com.google.gms.google-services' android || true
           test -s google-services.json
 
       - name: Build release APK
@@ -81,13 +87,13 @@ jobs:
         run: |
           APK="app/android/app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
-          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.11.apk
-          sha256sum RAIO-X-Eleicoes-2026-v0.3.11.apk
+          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.12.apk
+          sha256sum RAIO-X-Eleicoes-2026-v0.3.12.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: RAIO-X-Eleicoes-2026-v0.3.11-APK
-          path: RAIO-X-Eleicoes-2026-v0.3.11.apk
+          name: RAIO-X-Eleicoes-2026-v0.3.12-APK
+          path: RAIO-X-Eleicoes-2026-v0.3.12.apk
           if-no-files-found: error
           retention-days: 14
