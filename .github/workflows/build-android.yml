@@ -29,6 +29,14 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Verify crash-safe v0.3.4 source
+        working-directory: app
+        run: |
+          grep -q '"version": "0.3.4"' app.json
+          grep -q '"versionCode": 8' app.json
+          grep -q 'Versão de teste v0.3.4' AuthGate.js
+          if grep -q 'useAuthRequest' AuthGate.js; then echo 'Unsafe social auth hook found'; exit 1; fi
+
       - name: Generate audited TSE snapshot and official photos
         working-directory: app
         run: |
@@ -62,14 +70,14 @@ jobs:
           APK="app/android/app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           unzip -l "$APK" | grep -E 'index.android.bundle|assets/.+\.bundle'
-          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.3.apk
-          sha256sum RAIO-X-Eleicoes-2026-v0.3.3.apk
-          ls -lh RAIO-X-Eleicoes-2026-v0.3.3.apk
+          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.4.apk
+          sha256sum RAIO-X-Eleicoes-2026-v0.3.4.apk
+          ls -lh RAIO-X-Eleicoes-2026-v0.3.4.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: RAIO-X-Eleicoes-2026-v0.3.3-APK
-          path: RAIO-X-Eleicoes-2026-v0.3.3.apk
+          name: RAIO-X-Eleicoes-2026-v0.3.4-APK
+          path: RAIO-X-Eleicoes-2026-v0.3.4.apk
           if-no-files-found: error
           retention-days: 14
