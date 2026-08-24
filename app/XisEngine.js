@@ -1,22 +1,26 @@
 import * as SecureStore from 'expo-secure-store';
-import googleServices from './google-services.json';
 
+// Hotfix v0.3.16: this module must be safe to load on Android/Hermes.
+// Do not import google-services.json here. The Firebase Web API key is a public
+// client configuration value and is intentionally the same one already used by AuthGate.
+const FIREBASE_API_KEY='AIzaSyAmnbDT48iQW8SpxUZyTQh__HwM0yWgOwY';
 const XIS_API='https://raiox-xis-ai.vercel.app/api/xis';
 const HOURLY_LIMIT=10;
 const DAILY_LIMIT=25;
 const CACHE_MAX=12;
 const SESSION_KEY='raiox.auth.session.v1';
-const FIREBASE_API_KEY=googleServices?.client?.[0]?.api_key?.[0]?.current_key||'';
 const USAGE_PREFIX='raiox.xis.ai.usage.v1.';
 const CACHE_INDEX_PREFIX='raiox.xis.ai.cache.index.v1.';
 const CACHE_PREFIX='raiox.xis.ai.cache.v1.';
 
 function norm(value=''){
-  return String(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
+  try{return String(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim()}
+  catch{return String(value).toUpperCase().replace(/\s+/g,' ').trim()}
 }
 function money(value){
   const n=Number(value);
-  return Number.isFinite(n)?n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'não informado';
+  try{return Number.isFinite(n)?n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'não informado'}
+  catch{return Number.isFinite(n)?`R$ ${n.toFixed(2)}`:'não informado'}
 }
 function dayKey(d=new Date()){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -37,10 +41,12 @@ function userKey(session){return String(session?.uid||session?.email||'anonymous
 async function ensureFreshSession(session){
   if(!session)return null;
   if(session.idToken&&session.expiresAt&&session.expiresAt>Date.now()+120000)return session;
-  if(!session.refreshToken||!FIREBASE_API_KEY)return session;
+  if(!session.refreshToken)return session;
   try{
     const body=`grant_type=refresh_token&refresh_token=${encodeURIComponent(session.refreshToken)}`;
-    const response=await fetch(`https://securetoken.googleapis.com/v1/token?key=${FIREBASE_API_KEY}`,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
+    const response=await fetch(`https://securetoken.googleapis.com/v1/token?key=${FIREBASE_API_KEY}`,{
+      method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body
+    });
     const data=await response.json().catch(()=>({}));
     if(!response.ok||!data.id_token)return session;
     const next={...session,idToken:data.id_token,refreshToken:data.refresh_token||session.refreshToken,expiresAt:Date.now()+Math.max(300,Number(data.expires_in||3600)-60)*1000,uid:data.user_id||session.uid};
@@ -120,35 +126,31 @@ function contextForAi(tab,selected){
 }
 
 async function cacheGet(session,raw,selected){
-  const u=userKey(session), key=hash(`${norm(raw)}|${selected?.id||''}`);
+  const u=userKey(session),key=hash(`${norm(raw)}|${selected?.id||''}`);
   const value=await readJson(`${CACHE_PREFIX}${u}.${key}`,null);
   if(!value||!value.text)return null;
   return {...value,source:'cache'};
 }
 async function cachePut(session,raw,selected,value){
-  const u=userKey(session), key=hash(`${norm(raw)}|${selected?.id||''}`), storageKey=`${CACHE_PREFIX}${u}.${key}`;
+  const u=userKey(session),key=hash(`${norm(raw)}|${selected?.id||''}`),storageKey=`${CACHE_PREFIX}${u}.${key}`;
   await writeJson(storageKey,{text:String(value.text||'').slice(0,1800),at:Date.now(),model:value.model||''});
   const indexKey=`${CACHE_INDEX_PREFIX}${u}`;
-  let index=await readJson(indexKey,[]);index=[storageKey,...index.filter(x=>x!==storageKey)].slice(0,CACHE_MAX);
+  let index=await readJson(indexKey,[]);
+  index=[storageKey,...index.filter(x=>x!==storageKey)].slice(0,CACHE_MAX);
   await writeJson(indexKey,index);
 }
-
 async function usageStatus(session){
-  const u=userKey(session), key=`${USAGE_PREFIX}${u}`, now=Date.now(), hourAgo=now-3600000, today=dayKey();
+  const u=userKey(session),key=`${USAGE_PREFIX}${u}`,now=Date.now(),hourAgo=now-3600000,today=dayKey();
   const st=await readJson(key,{events:[]});
   const events=(Array.isArray(st.events)?st.events:[]).filter(t=>Number(t)>now-86400000);
-  const hourCount=events.filter(t=>Number(t)>=hourAgo).length, dayCount=events.filter(t=>dayKey(new Date(Number(t)))===today).length;
+  const hourCount=events.filter(t=>Number(t)>=hourAgo).length,dayCount=events.filter(t=>dayKey(new Date(Number(t)))===today).length;
   return {key,events,hourCount,dayCount,hourRemaining:Math.max(0,HOURLY_LIMIT-hourCount),dayRemaining:Math.max(0,DAILY_LIMIT-dayCount)};
 }
-async function markAiUse(status){
-  const events=[...status.events,Date.now()].slice(-DAILY_LIMIT-5);
-  await writeJson(status.key,{events});
-}
+async function markAiUse(status){await writeJson(status.key,{events:[...status.events,Date.now()].slice(-DAILY_LIMIT-5)})}
 
 export async function askXis(raw,{tab,selected,session}){
   const local=localDecision(raw,{tab,selected});
   if(local)return local;
-
   const cached=await cacheGet(session,raw,selected);
   if(cached)return {type:'answer',text:cached.text,source:'cache',model:cached.model||''};
 
@@ -160,7 +162,11 @@ export async function askXis(raw,{tab,selected,session}){
   if(usage.dayCount>=DAILY_LIMIT)return {type:'answer',text:'Você atingiu o limite diário de 25 análises por IA. O Xis continua funcionando com TSE, ajuda local e cache; novas análises por IA ficam disponíveis no próximo dia.',source:'limit',remaining:{hour:usage.hourRemaining,day:0}};
 
   try{
-    const response=await fetch(XIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${activeSession.idToken}`,'X-App-Version':'0.3.15'},body:JSON.stringify({needsAI:true,question:String(raw).slice(0,1200),context:contextForAi(tab,selected),limits:{hourly:HOURLY_LIMIT,daily:DAILY_LIMIT}})});
+    const response=await fetch(XIS_API,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${activeSession.idToken}`,'X-App-Version':'0.3.16'},
+      body:JSON.stringify({needsAI:true,question:String(raw).slice(0,1200),context:contextForAi(tab,selected),limits:{hourly:HOURLY_LIMIT,daily:DAILY_LIMIT}})
+    });
     const data=await response.json().catch(()=>({}));
     if(response.status===429)return {type:'answer',text:data.answer||'A cota de análise por IA foi atingida. Eu continuo disponível com os dados do app e respostas locais.',source:'limit',remaining:data.remaining||null};
     if(!response.ok||!data.ok||!data.answer)throw new Error(data.error||`HTTP ${response.status}`);
