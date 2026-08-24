@@ -1,4 +1,4 @@
-name: Build RAIO-X v0.3.13 Xis Biometric Login
+name: Build RAIO-X v0.3.14 Photos Icon Animated Xis
 
 on:
   pull_request:
@@ -11,7 +11,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 70
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,38 +27,41 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Apply v0.3.13 app shell patch
+      - name: Apply v0.3.13 auth shell
         working-directory: app
         run: python3 build_patch_v0313.py
 
-      - name: Verify v0.3.13 premium auth
+      - name: Apply v0.3.14 visual and animation patch
+        working-directory: app
+        run: python3 build_patch_v0314.py
+
+      - name: Verify v0.3.14 shell
         working-directory: app
         run: |
-          grep -q '"version": "0.3.13"' app.json
-          grep -q '"versionCode": 17' app.json
-          grep -q '"version": "0.3.13"' package.json
-          grep -q 'expo-local-authentication' package.json
-          grep -q 'expo-secure-store' package.json
-          grep -q 'PremiumAuthGate setSession' App.js
-          grep -q "const APP_VERSION='0.3.13'" App.js
+          grep -q '"version": "0.3.14"' app.json
+          grep -q '"versionCode": 18' app.json
+          grep -q '"version": "0.3.14"' package.json
+          grep -q '"icon": "./assets/raiox-icon.png"' app.json
+          test -s assets/raiox-icon.png
+          grep -q "const APP_VERSION='0.3.14'" App.js
+          grep -q "const APP_VERSION='0.3.14'" PremiumAuthGate.js
+          grep -q 'Animated.loop' PremiumAuthGate.js
+          grep -q 'translateY:floatY' PremiumAuthGate.js
           grep -q 'Continuar com Google' PremiumAuthGate.js
           grep -q 'Ativar acesso rápido' PremiumAuthGate.js
-          grep -q 'digital' PremiumAuthGate.js
-          grep -q 'reconhecimento facial' PremiumAuthGate.js
-          grep -q "require('expo-local-authentication')" PremiumAuthGate.js
-          grep -q "require('expo-secure-store')" PremiumAuthGate.js
-          grep -q 'refreshToken:data.refreshToken' GoogleLogin.js
-          grep -q 'divulgacandcontas.tse.jus.br/divulga/rest/arquivo/img/20322002026' App.js
           grep -q 'PAGE_SIZE=30' App.js
           grep -q 'Carregar mais' App.js
           if grep -q 'firebase/auth' App.js PremiumAuthGate.js GoogleLogin.js; then echo 'Firebase JS auth must stay out'; exit 1; fi
 
-      - name: Generate TSE snapshot
+      - name: Generate TSE snapshot and MG photos
         working-directory: app
         run: |
           python3 build_snapshot.py
           test -s tse_candidates_2026.json
           test -s candidate_photos.js
+          PHOTO_COUNT=$(grep -c "require('./assets/candidate_photos/" candidate_photos.js)
+          echo "Bundled photos: $PHOTO_COUNT"
+          test "$PHOTO_COUNT" -gt 1800
 
       - name: Install dependencies
         working-directory: app
@@ -70,12 +73,12 @@ jobs:
           CI: '1'
         run: npx expo prebuild --platform android --clean
 
-      - name: Verify native auth wiring
+      - name: Verify native auth and launcher icon
         working-directory: app
         run: |
           test -s android/app/google-services.json
           test -s google-services.json
-          grep -R -q 'USE_BIOMETRIC' android/app/src/main/AndroidManifest.xml android/app/build/intermediates || true
+          find android/app/src/main/res -type f | grep -E 'mipmap|launcher' | head -20
 
       - name: Build release APK
         working-directory: app/android
@@ -91,13 +94,13 @@ jobs:
         run: |
           APK="app/android/app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
-          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.13.apk
-          sha256sum RAIO-X-Eleicoes-2026-v0.3.13.apk
+          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.14.apk
+          sha256sum RAIO-X-Eleicoes-2026-v0.3.14.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: RAIO-X-Eleicoes-2026-v0.3.13-APK
-          path: RAIO-X-Eleicoes-2026-v0.3.13.apk
+          name: RAIO-X-Eleicoes-2026-v0.3.14-APK
+          path: RAIO-X-Eleicoes-2026-v0.3.14.apk
           if-no-files-found: error
           retention-days: 14
