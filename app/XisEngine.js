@@ -1,7 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 import candidates from './tse_candidates_2026.json';
 
-const XIS_API='https://saude-alexandre-ai.vercel.app/api/xis';
+const XIS_API='https://raiox-xis-ai.vercel.app/api/xis';
 const HOURLY_LIMIT=10;
 const DAILY_LIMIT=25;
 const CACHE_MAX=12;
