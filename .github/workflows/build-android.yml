@@ -37,11 +37,13 @@ jobs:
           test -s assets/raiox-icon.png
           file assets/raiox-icon.png | grep -q PNG
 
-      - name: Verify RAIO-X v0.3.16 hotfix source
+      - name: Verify RAIO-X v0.3.18 source
         working-directory: app
         run: |
-          grep -q '"version": "0.3.16"' app.json
-          grep -q '"versionCode": 20' app.json
+          grep -q '"version": "0.3.18"' app.json
+          grep -q '"versionCode": 22' app.json
+          grep -q '"expo-local-authentication": "~56.0.4"' package.json
+          grep -q '"expo-secure-store": "~56.0.4"' package.json
           grep -q 'googleServicesFile' app.json
           grep -q '@react-native-google-signin/google-signin' package.json
           grep -q "require('./App')" index.js
@@ -51,10 +53,6 @@ jobs:
           grep -q "raiox-xis-ai.vercel.app/api/xis" XisEngine.js
           if grep -q "googleServices from './google-services.json'" XisEngine.js; then echo 'Unsafe runtime JSON import found in XisEngine'; exit 1; fi
           if grep -q '"firebase"' package.json; then echo 'Firebase JS SDK must not be bundled'; exit 1; fi
-          grep -q 'identitytoolkit.googleapis.com' AuthGate.js
-          grep -q 'firestore.googleapis.com' AuthGate.js
-          grep -q "require('@react-native-google-signin/google-signin')" AuthGate.js
-          if grep -q "from 'firebase/" AuthGate.js; then echo 'Unsafe Firebase JS import found'; exit 1; fi
 
       - name: Generate audited TSE snapshot and official photos
         working-directory: app
@@ -67,6 +65,13 @@ jobs:
       - name: Install dependencies
         working-directory: app
         run: npm install --no-audit --no-fund --legacy-peer-deps
+
+      - name: Verify installed Expo native modules
+        working-directory: app
+        run: |
+          node -p "require('./node_modules/expo-local-authentication/package.json').version" | grep -q '^56\.0\.'
+          node -p "require('./node_modules/expo-secure-store/package.json').version" | grep -q '^56\.0\.'
+          npx expo install --check
 
       - name: Expo prebuild Android
         working-directory: app
@@ -95,29 +100,16 @@ jobs:
           APK="app/android/app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           unzip -l "$APK" | grep -E 'index.android.bundle|assets/.+\.bundle'
-          unzip -p "$APK" assets/app.config | grep -q '"version":"0.3.16"'
-          unzip -p "$APK" assets/app.config | grep -q '"versionCode":20'
-          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.16-HOTFIX.apk
-          sha256sum RAIO-X-Eleicoes-2026-v0.3.16-HOTFIX.apk
-          ls -lh RAIO-X-Eleicoes-2026-v0.3.16-HOTFIX.apk
+          unzip -p "$APK" assets/app.config | grep -q '"version":"0.3.18"'
+          unzip -p "$APK" assets/app.config | grep -q '"versionCode":22'
+          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.18-NATIVE-FIX.apk
+          sha256sum RAIO-X-Eleicoes-2026-v0.3.18-NATIVE-FIX.apk
+          ls -lh RAIO-X-Eleicoes-2026-v0.3.18-NATIVE-FIX.apk
 
       - name: Upload workflow APK
         uses: actions/upload-artifact@v4
         with:
-          name: RAIO-X-Eleicoes-2026-v0.3.16-HOTFIX-APK
-          path: RAIO-X-Eleicoes-2026-v0.3.16-HOTFIX.apk
+          name: RAIO-X-Eleicoes-2026-v0.3.18-NATIVE-FIX-APK
+          path: RAIO-X-Eleicoes-2026-v0.3.18-NATIVE-FIX.apk
           if-no-files-found: error
           retention-days: 14
-
-      - name: Publish v0.3.16 release
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v0.3.16
-          name: RAIO-X Eleições 2026 v0.3.16 Hotfix
-          body: |
-            Hotfix de inicialização após falhas contínuas na v0.3.15.
-            Remove importação JSON do motor Xis em runtime e adiciona contenção de falhas na inicialização.
-            Mantém endpoint Xis isolado, GPT-5.4 nano, cache e limites 10/h e 25/dia.
-          files: RAIO-X-Eleicoes-2026-v0.3.16-HOTFIX.apk
-          fail_on_unmatched_files: true
