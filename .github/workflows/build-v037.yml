@@ -1,0 +1,106 @@
+name: Build RAIO-X v0.3.14 Photos Icon Animated Xis
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Apply v0.3.13 auth shell
+        working-directory: app
+        run: python3 build_patch_v0313.py
+
+      - name: Apply v0.3.14 visual and animation patch
+        working-directory: app
+        run: python3 build_patch_v0314.py
+
+      - name: Verify v0.3.14 shell
+        working-directory: app
+        run: |
+          grep -q '"version": "0.3.14"' app.json
+          grep -q '"versionCode": 18' app.json
+          grep -q '"version": "0.3.14"' package.json
+          grep -q '"icon": "./assets/raiox-icon.png"' app.json
+          test -s assets/raiox-icon.png
+          grep -q "const APP_VERSION='0.3.14'" App.js
+          grep -q "const APP_VERSION='0.3.14'" PremiumAuthGate.js
+          grep -q 'Animated.loop' PremiumAuthGate.js
+          grep -q 'translateY:floatY' PremiumAuthGate.js
+          grep -q 'Continuar com Google' PremiumAuthGate.js
+          grep -q 'Ativar acesso rápido' PremiumAuthGate.js
+          grep -q 'PAGE_SIZE=30' App.js
+          grep -q 'Carregar mais' App.js
+          if grep -q 'firebase/auth' App.js PremiumAuthGate.js GoogleLogin.js; then echo 'Firebase JS auth must stay out'; exit 1; fi
+
+      - name: Generate TSE snapshot and MG photos
+        working-directory: app
+        run: |
+          python3 build_snapshot.py
+          test -s tse_candidates_2026.json
+          test -s candidate_photos.js
+          PHOTO_COUNT=$(grep -c "require('./assets/candidate_photos/" candidate_photos.js)
+          echo "Bundled photos: $PHOTO_COUNT"
+          test "$PHOTO_COUNT" -gt 1800
+
+      - name: Install dependencies
+        working-directory: app
+        run: npm install --no-audit --no-fund --legacy-peer-deps
+
+      - name: Expo prebuild Android
+        working-directory: app
+        env:
+          CI: '1'
+        run: npx expo prebuild --platform android --clean
+
+      - name: Verify native auth and launcher icon
+        working-directory: app
+        run: |
+          test -s android/app/google-services.json
+          test -s google-services.json
+          find android/app/src/main/res -type f | grep -E 'mipmap|launcher' | head -20
+
+      - name: Build release APK
+        working-directory: app/android
+        env:
+          NODE_ENV: production
+          NODE_OPTIONS: --max-old-space-size=4096
+          JAVA_TOOL_OPTIONS: -Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon --max-workers=2 --stacktrace --console=plain
+
+      - name: Package APK
+        run: |
+          APK="app/android/app/build/outputs/apk/release/app-release.apk"
+          test -s "$APK"
+          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.14.apk
+          sha256sum RAIO-X-Eleicoes-2026-v0.3.14.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: RAIO-X-Eleicoes-2026-v0.3.14-APK
+          path: RAIO-X-Eleicoes-2026-v0.3.14.apk
+          if-no-files-found: error
+          retention-days: 14

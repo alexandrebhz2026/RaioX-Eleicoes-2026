@@ -136,8 +136,9 @@ for c in base:
 if len(base)<100: raise SystemExit('snapshot pequeno')
 with open('tse_candidates_2026.json','w',encoding='utf-8') as f: json.dump(base,f,ensure_ascii=False,separators=(',',':'))
 
+# v0.3.14: embed every MG candidate photo (including federal/state deputies) plus all major offices nationwide.
 major={'PRESIDENTE','VICE-PRESIDENTE','GOVERNADOR','VICE-GOVERNADOR','SENADOR','1O SUPLENTE','2O SUPLENTE','1º SUPLENTE','2º SUPLENTE'}
-targets={c['id']:c for c in base if norm(c['office']) in major}
+targets={c['id']:c for c in base if c['uf']=='MG' or norm(c['office']) in major}
 ids_by_uf=defaultdict(set)
 for cid,c in targets.items(): ids_by_uf[c['uf']].add(cid)
 os.makedirs('assets/candidate_photos',exist_ok=True); photo_map={}
@@ -160,9 +161,15 @@ with open('candidate_photos.js','w',encoding='utf-8') as f:
  for cid,path in sorted(photo_map.items()): f.write(f"  '{cid}': require('./{path}'),\n")
  f.write('};\n')
 
-print('candidate rows',len(base),'unique assets',sum(len(v) for v in assets.values()),'photos',len(photo_map))
+print('candidate rows',len(base),'unique assets',sum(len(v) for v in assets.values()),'photos',len(photo_map),'MG photos',sum(1 for cid in photo_map if by_id.get(cid,{}).get('uf')=='MG'))
 kalil=by_id.get('130002539775')
 if kalil:
  print('KALIL AUDIT',json.dumps({k:kalil.get(k) for k in ('id','name','status','totalizationStatus','reelection','assetCount','assetTotal','ticket')},ensure_ascii=False),'photo',kalil['id'] in photo_map)
  if kalil['assetCount']>=80 or kalil['assetTotal']>=10000000: raise SystemExit('bens do Kalil ainda duplicados')
  if kalil['id'] not in photo_map: raise SystemExit('foto oficial do Kalil não foi embutida')
+
+mg_deputies=[c for c in base if c['uf']=='MG' and norm(c['office']) in {'DEPUTADO FEDERAL','DEPUTADO ESTADUAL'}]
+mg_with_photo=sum(1 for c in mg_deputies if c['id'] in photo_map)
+print('MG DEPUTY PHOTO AUDIT',mg_with_photo,'/',len(mg_deputies))
+if mg_deputies and mg_with_photo < max(1,int(len(mg_deputies)*0.90)):
+ raise SystemExit('cobertura de fotos de deputados MG abaixo de 90%')
