@@ -1,4 +1,4 @@
-name: Build RAIO-X v0.3.12 Mandatory Login
+name: Build RAIO-X v0.3.13 Xis Biometric Login
 
 on:
   pull_request:
@@ -27,25 +27,31 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Verify v0.3.12 mandatory login
+      - name: Apply v0.3.13 app shell patch
+        working-directory: app
+        run: python3 build_patch_v0313.py
+
+      - name: Verify v0.3.13 premium auth
         working-directory: app
         run: |
-          grep -q '"version": "0.3.12"' app.json
-          grep -q '"versionCode": 16' app.json
-          grep -q '"version": "0.3.12"' package.json
-          grep -q 'googleServicesFile' app.json
-          grep -q '@react-native-google-signin/google-signin' package.json
-          grep -q "const APP_VERSION='0.3.12'" App.js
-          grep -q 'if(!session)' App.js
-          grep -q 'ACESSO OBRIGATÓRIO' App.js
-          grep -q 'Todos os usuários precisam se autenticar antes de acessar' App.js
+          grep -q '"version": "0.3.13"' app.json
+          grep -q '"versionCode": 17' app.json
+          grep -q '"version": "0.3.13"' package.json
+          grep -q 'expo-local-authentication' package.json
+          grep -q 'expo-secure-store' package.json
+          grep -q 'PremiumAuthGate setSession' App.js
+          grep -q "const APP_VERSION='0.3.13'" App.js
+          grep -q 'Continuar com Google' PremiumAuthGate.js
+          grep -q 'Ativar acesso rápido' PremiumAuthGate.js
+          grep -q 'digital' PremiumAuthGate.js
+          grep -q 'reconhecimento facial' PremiumAuthGate.js
+          grep -q "require('expo-local-authentication')" PremiumAuthGate.js
+          grep -q "require('expo-secure-store')" PremiumAuthGate.js
+          grep -q 'refreshToken:data.refreshToken' GoogleLogin.js
+          grep -q 'divulgacandcontas.tse.jus.br/divulga/rest/arquivo/img/20322002026' App.js
           grep -q 'PAGE_SIZE=30' App.js
           grep -q 'Carregar mais' App.js
-          grep -q 'Continuar com Google' App.js
-          grep -q "require('@react-native-google-signin/google-signin')" GoogleLogin.js
-          grep -q 'accounts:signInWithIdp' GoogleLogin.js
-          if grep -q 'firebase/auth' App.js GoogleLogin.js; then echo 'Firebase JS auth must stay out'; exit 1; fi
-          if grep -q 'expo-local-authentication' App.js GoogleLogin.js; then echo 'Biometric module must stay out'; exit 1; fi
+          if grep -q 'firebase/auth' App.js PremiumAuthGate.js GoogleLogin.js; then echo 'Firebase JS auth must stay out'; exit 1; fi
 
       - name: Generate TSE snapshot
         working-directory: app
@@ -64,11 +70,12 @@ jobs:
           CI: '1'
         run: npx expo prebuild --platform android --clean
 
-      - name: Verify Google native wiring
+      - name: Verify native auth wiring
         working-directory: app
         run: |
           test -s android/app/google-services.json
           test -s google-services.json
+          grep -R -q 'USE_BIOMETRIC' android/app/src/main/AndroidManifest.xml android/app/build/intermediates || true
 
       - name: Build release APK
         working-directory: app/android
@@ -84,13 +91,13 @@ jobs:
         run: |
           APK="app/android/app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
-          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.12.apk
-          sha256sum RAIO-X-Eleicoes-2026-v0.3.12.apk
+          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.13.apk
+          sha256sum RAIO-X-Eleicoes-2026-v0.3.13.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: RAIO-X-Eleicoes-2026-v0.3.12-APK
-          path: RAIO-X-Eleicoes-2026-v0.3.12.apk
+          name: RAIO-X-Eleicoes-2026-v0.3.13-APK
+          path: RAIO-X-Eleicoes-2026-v0.3.13.apk
           if-no-files-found: error
           retention-days: 14
