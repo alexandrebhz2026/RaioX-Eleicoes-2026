@@ -29,6 +29,14 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Restore approved RAIO-X icon
+        working-directory: app
+        run: |
+          mkdir -p assets
+          base64 -d assets/raiox-icon.png.b64 > assets/raiox-icon.png
+          test -s assets/raiox-icon.png
+          file assets/raiox-icon.png | grep -q PNG
+
       - name: Verify RAIO-X v0.3.15 source
         working-directory: app
         run: |
@@ -85,6 +93,8 @@ jobs:
           APK="app/android/app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           unzip -l "$APK" | grep -E 'index.android.bundle|assets/.+\.bundle'
+          unzip -p "$APK" assets/app.config | grep -q '"version":"0.3.15"'
+          unzip -p "$APK" assets/app.config | grep -q '"versionCode":19'
           cp "$APK" RAIO-X-Eleicoes-2026-v0.3.15.apk
           sha256sum RAIO-X-Eleicoes-2026-v0.3.15.apk
           ls -lh RAIO-X-Eleicoes-2026-v0.3.15.apk
