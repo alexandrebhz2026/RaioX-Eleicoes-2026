@@ -1,6 +1,6 @@
 {
   "name": "raiox-eleicoes-2026",
-  "version": "0.3.15",
+  "version": "0.3.16",
   "private": true,
   "main": "index.js",
   "scripts": {"android":"expo start --android"},
