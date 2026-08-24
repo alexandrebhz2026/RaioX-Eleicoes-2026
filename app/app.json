@@ -2,7 +2,7 @@
   "expo": {
     "name": "RAIO-X Eleições 2026",
     "slug": "raio-x-eleicoes-2026",
-    "version": "0.3.8",
+    "version": "0.3.9",
     "scheme": "raiox2026",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
@@ -10,7 +10,7 @@
     "ios": {"supportsTablet": true, "bundleIdentifier": "com.raiox2026.app"},
     "android": {
       "package": "com.raiox2026.app",
-      "versionCode": 12,
+      "versionCode": 13,
       "predictiveBackGestureEnabled": false
     },
     "androidStatusBar": {"barStyle": "light-content", "backgroundColor": "#061329", "translucent": false},
