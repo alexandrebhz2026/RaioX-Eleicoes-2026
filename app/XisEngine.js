@@ -1,10 +1,12 @@
 import * as SecureStore from 'expo-secure-store';
-import candidates from './tse_candidates_2026.json';
+import googleServices from './google-services.json';
 
 const XIS_API='https://raiox-xis-ai.vercel.app/api/xis';
 const HOURLY_LIMIT=10;
 const DAILY_LIMIT=25;
 const CACHE_MAX=12;
+const SESSION_KEY='raiox.auth.session.v1';
+const FIREBASE_API_KEY=googleServices?.client?.[0]?.api_key?.[0]?.current_key||'';
 const USAGE_PREFIX='raiox.xis.ai.usage.v1.';
 const CACHE_INDEX_PREFIX='raiox.xis.ai.cache.index.v1.';
 const CACHE_PREFIX='raiox.xis.ai.cache.v1.';
@@ -31,6 +33,21 @@ async function writeJson(key,value){
   try{await SecureStore.setItemAsync(key,JSON.stringify(value));return true}catch{return false}
 }
 function userKey(session){return String(session?.uid||session?.email||'anonymous').replace(/[^a-zA-Z0-9_.@-]/g,'_').slice(0,120)}
+
+async function ensureFreshSession(session){
+  if(!session)return null;
+  if(session.idToken&&session.expiresAt&&session.expiresAt>Date.now()+120000)return session;
+  if(!session.refreshToken||!FIREBASE_API_KEY)return session;
+  try{
+    const body=`grant_type=refresh_token&refresh_token=${encodeURIComponent(session.refreshToken)}`;
+    const response=await fetch(`https://securetoken.googleapis.com/v1/token?key=${FIREBASE_API_KEY}`,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||!data.id_token)return session;
+    const next={...session,idToken:data.id_token,refreshToken:data.refresh_token||session.refreshToken,expiresAt:Date.now()+Math.max(300,Number(data.expires_in||3600)-60)*1000,uid:data.user_id||session.uid};
+    await SecureStore.setItemAsync(SESSION_KEY,JSON.stringify(next));
+    return next;
+  }catch{return session}
+}
 
 export function xisContextHelp(tab,selected){
   if(tab==='Início')return 'Aqui eu posso abrir um Raio-X, levar você à busca por cargo ou explicar como o app funciona.';
@@ -135,20 +152,21 @@ export async function askXis(raw,{tab,selected,session}){
   const cached=await cacheGet(session,raw,selected);
   if(cached)return {type:'answer',text:cached.text,source:'cache',model:cached.model||''};
 
-  if(!session?.uid||!session?.idToken)return {type:'answer',text:'Eu consigo continuar ajudando com os dados do app, mas a análise aprofundada por IA exige uma sessão autenticada.',source:'local'};
+  const activeSession=await ensureFreshSession(session);
+  if(!activeSession?.uid||!activeSession?.idToken)return {type:'answer',text:'Eu consigo continuar ajudando com os dados do app, mas a análise aprofundada por IA exige uma sessão autenticada.',source:'local'};
 
-  const usage=await usageStatus(session);
+  const usage=await usageStatus(activeSession);
   if(usage.hourCount>=HOURLY_LIMIT)return {type:'answer',text:'Você atingiu o limite de 10 análises por IA nesta hora. Eu continuo funcionando normalmente com dados oficiais, ajuda local e respostas em cache. A cota de IA renova automaticamente.',source:'limit',remaining:{hour:0,day:usage.dayRemaining}};
   if(usage.dayCount>=DAILY_LIMIT)return {type:'answer',text:'Você atingiu o limite diário de 25 análises por IA. O Xis continua funcionando com TSE, ajuda local e cache; novas análises por IA ficam disponíveis no próximo dia.',source:'limit',remaining:{hour:usage.hourRemaining,day:0}};
 
   try{
-    const response=await fetch(XIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.idToken}`,'X-App-Version':'0.3.15'},body:JSON.stringify({needsAI:true,question:String(raw).slice(0,1200),context:contextForAi(tab,selected),limits:{hourly:HOURLY_LIMIT,daily:DAILY_LIMIT}})});
+    const response=await fetch(XIS_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${activeSession.idToken}`,'X-App-Version':'0.3.15'},body:JSON.stringify({needsAI:true,question:String(raw).slice(0,1200),context:contextForAi(tab,selected),limits:{hourly:HOURLY_LIMIT,daily:DAILY_LIMIT}})});
     const data=await response.json().catch(()=>({}));
     if(response.status===429)return {type:'answer',text:data.answer||'A cota de análise por IA foi atingida. Eu continuo disponível com os dados do app e respostas locais.',source:'limit',remaining:data.remaining||null};
     if(!response.ok||!data.ok||!data.answer)throw new Error(data.error||`HTTP ${response.status}`);
     await markAiUse(usage);
-    await cachePut(session,raw,selected,{text:data.answer,model:data.model||'gpt-5.6-luna'});
-    return {type:'answer',text:String(data.answer).slice(0,1800),source:'ai',model:data.model||'gpt-5.6-luna',remaining:data.remaining||{hour:usage.hourRemaining-1,day:usage.dayRemaining-1}};
+    await cachePut(activeSession,raw,selected,{text:data.answer,model:data.model||'gpt-5.4-nano'});
+    return {type:'answer',text:String(data.answer).slice(0,1800),source:'ai',model:data.model||'gpt-5.4-nano',remaining:data.remaining||{hour:usage.hourRemaining-1,day:usage.dayRemaining-1}};
   }catch(e){
     console.warn('Xis AI fallback unavailable',e?.message||e);
     return {type:'answer',text:'Não consegui usar a análise aprofundada agora. Posso continuar ajudando com tudo que está na base oficial do app, sem gastar IA.',source:'local-unavailable'};
