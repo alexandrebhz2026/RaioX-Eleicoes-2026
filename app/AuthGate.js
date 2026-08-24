@@ -29,6 +29,8 @@ async function saveUserProfile(user, provider) {
       provider: provider || user.providerData?.[0]?.providerId || 'unknown',
       platform: Platform.OS,
       appVersion: '0.3.5',
+      authCreatedAt: user.metadata?.creationTime || '',
+      lastSignInAt: user.metadata?.lastSignInTime || '',
       lastAccessAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }, {merge: true});
