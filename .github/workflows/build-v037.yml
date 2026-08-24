@@ -1,4 +1,4 @@
-name: Build RAIO-X v0.3.14 Photos Icon Animated Xis
+name: Build RAIO-X v0.3.15 Direct Raio-X No Radar
 
 on:
   pull_request:
@@ -35,20 +35,27 @@ jobs:
         working-directory: app
         run: python3 build_patch_v0314.py
 
-      - name: Verify v0.3.14 shell
+      - name: Apply v0.3.15 navigation and Raio-X patch
+        working-directory: app
+        run: python3 build_patch_v0315.py
+
+      - name: Verify v0.3.15 shell
         working-directory: app
         run: |
-          grep -q '"version": "0.3.14"' app.json
-          grep -q '"versionCode": 18' app.json
-          grep -q '"version": "0.3.14"' package.json
+          grep -q '"version": "0.3.15"' app.json
+          grep -q '"versionCode": 19' app.json
+          grep -q '"version": "0.3.15"' package.json
           grep -q '"icon": "./assets/raiox-icon.png"' app.json
           test -s assets/raiox-icon.png
-          grep -q "const APP_VERSION='0.3.14'" App.js
-          grep -q "const APP_VERSION='0.3.14'" PremiumAuthGate.js
+          grep -q "const APP_VERSION='0.3.15'" App.js
+          grep -q "const APP_VERSION='0.3.15'" PremiumAuthGate.js
           grep -q 'Animated.loop' PremiumAuthGate.js
-          grep -q 'translateY:floatY' PremiumAuthGate.js
           grep -q 'Continuar com Google' PremiumAuthGate.js
           grep -q 'Ativar acesso rápido' PremiumAuthGate.js
+          grep -q 'Digite o nome, número ou partido' App.js
+          grep -q "const nav=\[\['⌂','Início'\],\['⌕','Busca'\],\['X','Raio-X'\],\['⇄','Comparar'\]\]" App.js
+          if grep -q 'Radar 2026' App.js; then echo 'Radar must be removed'; exit 1; fi
+          if grep -q "'Radar'" App.js; then echo 'Radar nav must be removed'; exit 1; fi
           grep -q 'PAGE_SIZE=30' App.js
           grep -q 'Carregar mais' App.js
           if grep -q 'firebase/auth' App.js PremiumAuthGate.js GoogleLogin.js; then echo 'Firebase JS auth must stay out'; exit 1; fi
@@ -94,13 +101,13 @@ jobs:
         run: |
           APK="app/android/app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
-          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.14.apk
-          sha256sum RAIO-X-Eleicoes-2026-v0.3.14.apk
+          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.15.apk
+          sha256sum RAIO-X-Eleicoes-2026-v0.3.15.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: RAIO-X-Eleicoes-2026-v0.3.14-APK
-          path: RAIO-X-Eleicoes-2026-v0.3.14.apk
+          name: RAIO-X-Eleicoes-2026-v0.3.15-APK
+          path: RAIO-X-Eleicoes-2026-v0.3.15.apk
           if-no-files-found: error
           retention-days: 14
