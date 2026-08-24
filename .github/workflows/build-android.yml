@@ -48,6 +48,7 @@ jobs:
           grep -q 'Fala com o Xis' App.js
           grep -q 'v0.3.19' App.js
           grep -q "APP_VERSION='0.3.19'" AuthGate.js
+          grep -q 'Local, TSE e cache são ilimitados' App.js
           if grep -q 'function XisFace({large=false}).*xisAntenna' App.js; then echo 'Legacy block Xis still present'; exit 1; fi
 
       - name: Verify RAIO-X v0.3.19 source
@@ -55,6 +56,8 @@ jobs:
         run: |
           grep -q '"version": "0.3.19"' app.json
           grep -q '"versionCode": 23' app.json
+          grep -q '"xisUi": "official-v019"' app.json
+          grep -q '"xisAiPolicy": "local-tse-cache-ai"' app.json
           grep -q '"version": "0.3.19"' package.json
           grep -q '"expo-local-authentication": "~56.0.4"' package.json
           grep -q '"expo-secure-store": "~56.0.4"' package.json
@@ -107,16 +110,15 @@ jobs:
           chmod +x gradlew
           ./gradlew :app:assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon --max-workers=2 --stacktrace --console=plain
 
-      - name: Verify APK and Xis bundle
+      - name: Verify APK and Xis build marker
         run: |
           APK="app/android/app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           unzip -l "$APK" | grep -E 'index.android.bundle|assets/.+\.bundle'
           unzip -p "$APK" assets/app.config | grep -q '"version":"0.3.19"'
           unzip -p "$APK" assets/app.config | grep -q '"versionCode":23'
-          unzip -p "$APK" assets/index.android.bundle > /tmp/raiox.bundle
-          strings /tmp/raiox.bundle | grep -q 'Fala com o Xis'
-          strings /tmp/raiox.bundle | grep -q 'IA só é usada no último caso'
+          unzip -p "$APK" assets/app.config | grep -q '"xisUi":"official-v019"'
+          unzip -p "$APK" assets/app.config | grep -q '"xisAiPolicy":"local-tse-cache-ai"'
           cp "$APK" RAIO-X-Eleicoes-2026-v0.3.19-XIS-OFICIAL.apk
           sha256sum RAIO-X-Eleicoes-2026-v0.3.19-XIS-OFICIAL.apk
           ls -lh RAIO-X-Eleicoes-2026-v0.3.19-XIS-OFICIAL.apk
