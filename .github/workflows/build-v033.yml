@@ -42,7 +42,7 @@ jobs:
 
       - name: Apply v0.3.33 patch
         working-directory: app
-        run: python3 patch_v033.py
+        run: python3 patch_v033_favorites.py
 
       - name: Verify v0.3.33 source
         working-directory: app
@@ -61,6 +61,10 @@ jobs:
           grep -q "AO VIVO" AppV020.js
           grep -q "setInterval(load,20000)" AppV020.js
           grep -q "LIVE_RESULTS_API" AppV020.js
+          grep -q "function FavoritesScreen" AppV020.js
+          grep -q "FAVORITES_KEY" AppV020.js
+          grep -q "FavoriteButton" AppV020.js
+          grep -q "APURAÇÃO AO VIVO" AppV020.js
           grep -q "expo-location" package.json
 
       - name: Generate audited TSE snapshot and photos
@@ -102,14 +106,14 @@ jobs:
         run: |
           APK="app/android/app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
-          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.33-PESQUISAS-APURACAO.apk
-          sha256sum RAIO-X-Eleicoes-2026-v0.3.33-PESQUISAS-APURACAO.apk
-          ls -lh RAIO-X-Eleicoes-2026-v0.3.33-PESQUISAS-APURACAO.apk
+          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.33-COMPLETO.apk
+          sha256sum RAIO-X-Eleicoes-2026-v0.3.33-COMPLETO.apk
+          ls -lh RAIO-X-Eleicoes-2026-v0.3.33-COMPLETO.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: RAIO-X-Eleicoes-2026-v0.3.33-PESQUISAS-APURACAO-APK
-          path: RAIO-X-Eleicoes-2026-v0.3.33-PESQUISAS-APURACAO.apk
+          name: RAIO-X-Eleicoes-2026-v0.3.33-COMPLETO-APK
+          path: RAIO-X-Eleicoes-2026-v0.3.33-COMPLETO.apk
           if-no-files-found: error
           retention-days: 14
