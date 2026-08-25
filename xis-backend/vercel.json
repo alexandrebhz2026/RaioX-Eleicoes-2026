@@ -1,9 +1,11 @@
 {
   "version": 2,
   "functions": {
-    "api/xis.js": {"maxDuration": 15}
+    "api/xis.js": {"maxDuration": 15},
+    "api/polls.js": {"maxDuration": 20}
   },
   "rewrites": [
-    {"source": "/api/xis", "destination": "/api/xis.js"}
+    {"source": "/api/xis", "destination": "/api/xis.js"},
+    {"source": "/api/polls", "destination": "/api/polls.js"}
   ]
 }
