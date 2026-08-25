@@ -37,23 +37,25 @@ jobs:
           test -s assets/raiox-icon.png
           file assets/raiox-icon.png | grep -q PNG
 
-      - name: Apply v0.3.23 final test patch
+      - name: Apply v0.3.24 final patch
         working-directory: app
         run: |
-          python3 patch_v023_final.py
+          python3 patch_v024.py
 
-      - name: Verify RAIO-X v0.3.23 final source
+      - name: Verify RAIO-X v0.3.24 final source
         working-directory: app
         run: |
-          grep -q '"version": "0.3.23"' app.json
-          grep -q '"versionCode": 27' app.json
+          grep -q '"version": "0.3.24"' app.json
+          grep -q '"versionCode": 28' app.json
           grep -q '"candidateBatch": 15' app.json
           grep -q '"candidatePhotos": "mg-deputies-official-v023"' app.json
+          grep -q '"metricLayout": "wide-patrimonio-v024"' app.json
+          grep -q '"release": "final-v024"' app.json
           grep -q '"biometricVisual": "xis-owner-v023"' app.json
           grep -q '"accessMethod": "dynamic-biometric-faceid-v023"' app.json
           grep -q '"xisIntro": "first-login-per-user-v023"' app.json
           grep -q '"appearance": "light-dark-automatic"' app.json
-          grep -q '"version": "0.3.23"' package.json
+          grep -q '"version": "0.3.24"' package.json
           grep -q "SafeAreaProvider" index.js
           grep -q "XIS_ACCESS_APPROVED" AuthGateV020.js
           grep -q "supportedAuthenticationTypesAsync" AuthGateV020.js
@@ -66,6 +68,11 @@ jobs:
           grep -q "FlatList data={visible}" AppV020.js
           grep -q "maxToRenderPerBatch={BATCH_SIZE}" AppV020.js
           grep -q "DEPUTADO FEDERAL','DEPUTADO ESTADUAL" build_snapshot.py
+          grep -q "compact&&s.metricCompact" AppV020.js
+          grep -q "moneyValue&&s.metricMoney" AppV020.js
+          grep -q "metricCompact:{flex:.72}" AppV020.js
+          grep -q "metricMoney:{flex:1.72}" AppV020.js
+          grep -q "minimumFontScale={.62}" AppV020.js
           grep -q "Configurações" AppV020.js
           grep -q "Sobre o app" AppV020.js
           grep -q "Sair da conta" AppV020.js
@@ -138,20 +145,20 @@ jobs:
           APK="app/android/app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           unzip -l "$APK" | grep -E 'index.android.bundle|assets/.+\.bundle'
-          unzip -p "$APK" assets/app.config | grep -q '"version":"0.3.23"'
-          unzip -p "$APK" assets/app.config | grep -q '"versionCode":27'
+          unzip -p "$APK" assets/app.config | grep -q '"version":"0.3.24"'
+          unzip -p "$APK" assets/app.config | grep -q '"versionCode":28'
           unzip -p "$APK" assets/app.config | grep -q '"candidateBatch":15'
           unzip -p "$APK" assets/app.config | grep -q '"candidatePhotos":"mg-deputies-official-v023"'
-          unzip -p "$APK" assets/app.config | grep -q '"biometricVisual":"xis-owner-v023"'
-          unzip -p "$APK" assets/app.config | grep -q '"xisIntro":"first-login-per-user-v023"'
-          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.23-FINAL-TESTE.apk
-          sha256sum RAIO-X-Eleicoes-2026-v0.3.23-FINAL-TESTE.apk
-          ls -lh RAIO-X-Eleicoes-2026-v0.3.23-FINAL-TESTE.apk
+          unzip -p "$APK" assets/app.config | grep -q '"metricLayout":"wide-patrimonio-v024"'
+          unzip -p "$APK" assets/app.config | grep -q '"release":"final-v024"'
+          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.24-FINAL.apk
+          sha256sum RAIO-X-Eleicoes-2026-v0.3.24-FINAL.apk
+          ls -lh RAIO-X-Eleicoes-2026-v0.3.24-FINAL.apk
 
       - name: Upload workflow APK
         uses: actions/upload-artifact@v4
         with:
-          name: RAIO-X-Eleicoes-2026-v0.3.23-FINAL-TESTE-APK
-          path: RAIO-X-Eleicoes-2026-v0.3.23-FINAL-TESTE.apk
+          name: RAIO-X-Eleicoes-2026-v0.3.24-FINAL-APK
+          path: RAIO-X-Eleicoes-2026-v0.3.24-FINAL.apk
           if-no-files-found: error
           retention-days: 14
