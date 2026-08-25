@@ -1,0 +1,1 @@
+RAIO-X Eleicoes 2026 v0.3.5 Firebase Google Auth build trigger
