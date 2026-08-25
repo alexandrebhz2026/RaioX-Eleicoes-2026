@@ -42,7 +42,7 @@ jobs:
 
       - name: Build v0.3.36 source
         working-directory: app
-        run: python3 build_v036.py
+        run: python3 build_v036_clean.py
 
       - name: Verify v0.3.36 source
         working-directory: app
