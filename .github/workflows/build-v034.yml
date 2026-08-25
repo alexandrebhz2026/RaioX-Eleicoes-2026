@@ -42,7 +42,7 @@ jobs:
 
       - name: Apply v0.3.34 patch
         working-directory: app
-        run: python3 patch_v034.py
+        run: python3 run_v034.py
 
       - name: Verify v0.3.34 source
         working-directory: app
