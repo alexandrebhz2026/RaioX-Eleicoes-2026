@@ -42,9 +42,9 @@ jobs:
           echo '60f88c85dbb0e6fbbc92b811a35f6d1df312b7debfe568963cfb0d9b958e4c0f  assets/xis-intro-v9.mp4' | sha256sum -c -
           echo 'a9fcf4dd975477442c29a08616f7ae79c6413ceb85c841eb1a09750a46fc9183  assets/xis-oficial-full-v027.webp' | sha256sum -c -
 
-      - name: Apply v0.3.29 patch
+      - name: Apply v0.3.29 final patch
         working-directory: app
-        run: python3 patch_v029.py
+        run: python3 patch_v029_final.py
 
       - name: Verify v0.3.29 source
         working-directory: app
@@ -56,10 +56,14 @@ jobs:
           grep -q "const APP_VERSION='0.3.29'" AuthGateV020.js
           grep -q "'X-App-Version':'0.3.29'" XisEngine.js
           grep -q "function PollsScreen" AppV020.js
+          grep -q "function PollComparison" AppV020.js
+          grep -q "Resumo do Xis" AppV020.js
+          grep -q "LIDERA NAS DUAS" AppV020.js
           grep -q "Datafolha" AppV020.js
           grep -q "Quaest" AppV020.js
           grep -q "label=\"Pesquisas\"" AppV020.js
           grep -q "PESQUISAS - FONTES VERIFICADAS" AppV020.js
+          grep -q "const items=\[\['Início','⌂'\],\['Busca','⌕'\],\['Raio-X','X'\],\['Comparar','⇄'\],\['Pesquisas','▥'\]\]" AppV020.js
 
       - name: Generate audited TSE snapshot and photos
         working-directory: app
@@ -99,14 +103,14 @@ jobs:
         run: |
           APK="app/android/app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
-          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.29-PESQUISAS.apk
-          sha256sum RAIO-X-Eleicoes-2026-v0.3.29-PESQUISAS.apk
-          ls -lh RAIO-X-Eleicoes-2026-v0.3.29-PESQUISAS.apk
+          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.29-PESQUISAS-PREMIUM.apk
+          sha256sum RAIO-X-Eleicoes-2026-v0.3.29-PESQUISAS-PREMIUM.apk
+          ls -lh RAIO-X-Eleicoes-2026-v0.3.29-PESQUISAS-PREMIUM.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: RAIO-X-Eleicoes-2026-v0.3.29-PESQUISAS-APK
-          path: RAIO-X-Eleicoes-2026-v0.3.29-PESQUISAS.apk
+          name: RAIO-X-Eleicoes-2026-v0.3.29-PESQUISAS-PREMIUM-APK
+          path: RAIO-X-Eleicoes-2026-v0.3.29-PESQUISAS-PREMIUM.apk
           if-no-files-found: error
           retention-days: 14
