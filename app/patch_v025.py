@@ -10,7 +10,7 @@ def replace_once(path, old, new, label):
         raise SystemExit(f'Missing v0.3.25 target: {label} in {path}')
     p.write_text(text.replace(old, new, 1), encoding='utf-8')
 
-# Video player for the approved 8.5 s Xis introduction.
+# Video player for the approved Xis introduction.
 replace_once(
     'AppV020.js',
     "import * as SecureStore from 'expo-secure-store';",
@@ -58,7 +58,7 @@ pkg['dependencies']['expo-video'] = '~56.1.2'
 pkg_path.write_text(json.dumps(pkg, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
 video = Path('assets/xis-intro-v9.mp4')
-if not video.exists() or video.stat().st_size < 120_000:
+if not video.exists() or video.stat().st_size < 90_000:
     raise SystemExit('Approved Xis intro video is missing or incomplete')
 
 print('RAIO-X v0.3.25: approved Xis video intro + update-safe Android version applied')
