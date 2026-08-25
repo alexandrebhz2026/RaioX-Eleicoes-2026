@@ -1,0 +1,103 @@
+name: Build RAIO-X v0.3.25 APK
+
+on:
+  push:
+    branches: [v0.3.25-build]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Restore bundled assets
+        working-directory: app
+        run: |
+          mkdir -p assets
+          base64 -d assets/raiox-icon.png.b64 > assets/raiox-icon.png
+          base64 -d assets/xis-intro-v9-build.mp4.b64 > assets/xis-intro-v9.mp4
+          test -s assets/raiox-icon.png
+          test -s assets/xis-intro-v9.mp4
+          test "$(stat -c%s assets/xis-intro-v9.mp4)" -gt 30000
+
+      - name: Apply v0.3.25 patch
+        working-directory: app
+        run: python3 patch_v025.py
+
+      - name: Verify v0.3.25 source
+        working-directory: app
+        run: |
+          grep -q '"version": "0.3.25"' app.json
+          grep -q '"versionCode": 29' app.json
+          grep -q '"version": "0.3.25"' package.json
+          grep -q '"expo-video": "~56.1.2"' package.json
+          grep -q "xis-intro-v9.mp4" AppV020.js
+          grep -q "raiox.xis.intro.v2" AppV020.js
+          grep -q "const VERSION='0.3.25'" AppV020.js
+          grep -q "const APP_VERSION='0.3.25'" AuthGateV020.js
+
+      - name: Generate audited TSE snapshot and photos
+        working-directory: app
+        run: |
+          python3 build_snapshot.py
+          test -s tse_candidates_2026.json
+          test -s candidate_photos.js
+
+      - name: Install dependencies
+        working-directory: app
+        run: npm install --no-audit --no-fund --legacy-peer-deps
+
+      - name: Expo prebuild Android
+        working-directory: app
+        env:
+          CI: '1'
+        run: npx expo prebuild --platform android --clean
+
+      - name: Verify Google Services
+        working-directory: app
+        run: |
+          test -s android/app/google-services.json
+          grep -q 'com.raiox2026.app' android/app/google-services.json
+
+      - name: Build release APK
+        working-directory: app/android
+        env:
+          NODE_ENV: production
+          NODE_OPTIONS: --max-old-space-size=4096
+          JAVA_TOOL_OPTIONS: -Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon --max-workers=2 --stacktrace --console=plain
+
+      - name: Prepare APK
+        run: |
+          APK="app/android/app/build/outputs/apk/release/app-release.apk"
+          test -s "$APK"
+          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.25-XIS-VIDEO.apk
+          sha256sum RAIO-X-Eleicoes-2026-v0.3.25-XIS-VIDEO.apk
+          ls -lh RAIO-X-Eleicoes-2026-v0.3.25-XIS-VIDEO.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: RAIO-X-Eleicoes-2026-v0.3.25-XIS-VIDEO-APK
+          path: RAIO-X-Eleicoes-2026-v0.3.25-XIS-VIDEO.apk
+          if-no-files-found: error
+          retention-days: 14
