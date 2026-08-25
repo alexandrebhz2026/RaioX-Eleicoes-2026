@@ -1,0 +1,14 @@
+{
+  "name":"Painel RAIO-X",
+  "short_name":"Painel RAIO-X",
+  "description":"Painel administrativo de cadastros do RAIO-X Eleições 2026",
+  "start_url":"/admin/",
+  "scope":"/admin/",
+  "display":"standalone",
+  "background_color":"#061329",
+  "theme_color":"#061329",
+  "orientation":"portrait-primary",
+  "icons":[
+    {"src":"/admin/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}
