@@ -8,7 +8,7 @@
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#061329",
     "icon": "./assets/raiox-icon.png",
-    "extra": {"xisUi": "detective-clean-v023", "xisAiPolicy": "local-tse-cache-ai", "appearance": "light-dark-automatic", "layoutSafety": "safe-area-v023", "biometricVisual": "xis-owner-v023", "accessMethod": "dynamic-biometric-faceid-v023", "xisIntro": "first-login-per-user-v023"},
+    "extra": {"xisUi": "detective-clean-v023", "xisAiPolicy": "local-tse-cache-ai", "appearance": "light-dark-automatic", "layoutSafety": "safe-area-v023", "biometricVisual": "xis-owner-v023", "accessMethod": "dynamic-biometric-faceid-v023", "xisIntro": "first-login-per-user-v023", "candidateBatch": 15, "candidatePhotos": "mg-deputies-official-v023"},
     "plugins": [
       "@react-native-google-signin/google-signin",
       ["expo-local-authentication", {"faceIDPermission": "Use o Face ID para entrar com segurança no RAIO-X Eleições 2026."}],
