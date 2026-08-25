@@ -40,7 +40,7 @@ jobs:
           test -s assets/xis-oficial-v026.webp
           test -s assets/xis-oficial-full-v027.webp
           echo '60f88c85dbb0e6fbbc92b811a35f6d1df312b7debfe568963cfb0d9b958e4c0f  assets/xis-intro-v9.mp4' | sha256sum -c -
-          echo 'c1bfe4c07e835195b8b3c6ed2a578dbc8ad433991b6a5a1dd41dfba08feacd2b  assets/xis-oficial-full-v027.webp' | sha256sum -c -
+          echo 'a9fcf4dd975477442c29a08616f7ae79c6413ceb85c841eb1a09750a46fc9183  assets/xis-oficial-full-v027.webp' | sha256sum -c -
 
       - name: Apply v0.3.27 patch
         working-directory: app
