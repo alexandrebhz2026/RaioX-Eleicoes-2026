@@ -1,0 +1,114 @@
+name: Build RAIO-X v0.3.32 APK
+
+on:
+  push:
+    branches: [v0.3.32-pesquisas-layout]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Restore bundled assets
+        working-directory: app
+        run: |
+          mkdir -p assets
+          base64 -d assets/raiox-icon.png.b64 > assets/raiox-icon.png
+          cat assets/xis-v025-chunk00.b64 assets/xis-v025-chunk01.b64 assets/xis-v025-chunk02.b64 assets/xis-v025-chunk03.b64 assets/xis-v025-chunk04.b64 assets/xis-v025-chunk05.b64 > assets/xis-intro-v9.complete.b64
+          base64 -d assets/xis-intro-v9.complete.b64 > assets/xis-intro-v9.mp4
+          base64 -d assets/xis-oficial-v026.webp.b64 > assets/xis-oficial-v026.webp
+          base64 -d assets/xis-oficial-full-v027.webp.b64 > assets/xis-oficial-full-v027.webp
+          test -s assets/xis-intro-v9.mp4
+          test -s assets/xis-oficial-v026.webp
+          test -s assets/xis-oficial-full-v027.webp
+          echo '60f88c85dbb0e6fbbc92b811a35f6d1df312b7debfe568963cfb0d9b958e4c0f  assets/xis-intro-v9.mp4' | sha256sum -c -
+          echo 'a9fcf4dd975477442c29a08616f7ae79c6413ceb85c841eb1a09750a46fc9183  assets/xis-oficial-full-v027.webp' | sha256sum -c -
+
+      - name: Apply v0.3.32 patch
+        working-directory: app
+        run: python3 patch_v032.py
+
+      - name: Verify v0.3.32 source
+        working-directory: app
+        run: |
+          grep -q '"version": "0.3.32"' app.json
+          grep -q '"versionCode": 36' app.json
+          grep -q '"version": "0.3.32"' package.json
+          grep -q "const VERSION='0.3.32'" AppV020.js
+          grep -q "const APP_VERSION='0.3.32'" AuthGateV020.js
+          grep -q "'X-App-Version':'0.3.32'" XisEngine.js
+          grep -q "Resumo do Xis" AppV020.js
+          grep -q "Comparativo Nacional" AppV020.js
+          grep -q "Datafolha × Quaest" AppV020.js
+          grep -q "Acompanhe levantamentos eleitorais de forma clara, bonita e comparável" AppV020.js
+          grep -q "GOVERNADOR:MG" AppV020.js
+          grep -q "MG-00446/2026" AppV020.js
+          grep -q "MG-03490/2026" AppV020.js
+
+      - name: Generate audited TSE snapshot and photos
+        working-directory: app
+        run: |
+          python3 build_snapshot.py
+          test -s tse_candidates_2026.json
+          test -s candidate_photos.js
+
+      - name: Install dependencies
+        working-directory: app
+        run: npm install --no-audit --no-fund --legacy-peer-deps
+
+      - name: Expo prebuild Android
+        working-directory: app
+        env:
+          CI: '1'
+        run: npx expo prebuild --platform android --clean
+
+      - name: Verify Android wiring
+        working-directory: app
+        run: |
+          test -s android/app/google-services.json
+          grep -q 'com.raiox2026.app' android/app/google-services.json
+          grep -q 'android.permission.RECORD_AUDIO' android/app/src/main/AndroidManifest.xml
+
+      - name: Build release APK
+        working-directory: app/android
+        env:
+          NODE_ENV: production
+          NODE_OPTIONS: --max-old-space-size=4096
+          JAVA_TOOL_OPTIONS: -Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon --max-workers=2 --stacktrace --console=plain
+
+      - name: Prepare APK
+        run: |
+          APK="app/android/app/build/outputs/apk/release/app-release.apk"
+          test -s "$APK"
+          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.32-PESQUISAS-PREMIUM.apk
+          sha256sum RAIO-X-Eleicoes-2026-v0.3.32-PESQUISAS-PREMIUM.apk
+          ls -lh RAIO-X-Eleicoes-2026-v0.3.32-PESQUISAS-PREMIUM.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: RAIO-X-Eleicoes-2026-v0.3.32-PESQUISAS-PREMIUM-APK
+          path: RAIO-X-Eleicoes-2026-v0.3.32-PESQUISAS-PREMIUM.apk
+          if-no-files-found: error
+          retention-days: 14
