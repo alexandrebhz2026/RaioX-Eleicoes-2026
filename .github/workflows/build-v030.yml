@@ -44,7 +44,7 @@ jobs:
 
       - name: Apply v0.3.30 patch
         working-directory: app
-        run: python3 patch_v030.py
+        run: python3 patch_v030b.py
 
       - name: Verify v0.3.30 source
         working-directory: app
@@ -60,6 +60,8 @@ jobs:
           grep -q "POLLS_CACHE_KEY" AppV020.js
           grep -q "Última atualização" AppV020.js
           grep -q "Sem conexão com as fontes" AppV020.js
+          grep -q "incoming=new Set" AppV020.js
+          test -s polls_live.json
 
       - name: Generate audited TSE snapshot and photos
         working-directory: app
