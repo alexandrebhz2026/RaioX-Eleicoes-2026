@@ -16,6 +16,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Package complete project source
+        run: |
+          git archive --format=zip --output=RAIO-X-Eleicoes-2026-projeto-completo-v0.3.14.zip HEAD
+          unzip -t RAIO-X-Eleicoes-2026-projeto-completo-v0.3.14.zip >/dev/null
+          sha256sum RAIO-X-Eleicoes-2026-projeto-completo-v0.3.14.zip
+          ls -lh RAIO-X-Eleicoes-2026-projeto-completo-v0.3.14.zip
+
+      - name: Upload complete project ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: RAIO-X-Eleicoes-2026-projeto-completo-v0.3.14
+          path: RAIO-X-Eleicoes-2026-projeto-completo-v0.3.14.zip
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
