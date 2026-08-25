@@ -25,7 +25,7 @@ replace_once(
 )
 
 old_welcome = '''function XisWelcome({visible,onDismiss}){const s=useStyles();const pulse=useRef(new Animated.Value(0)).current;useEffect(()=>{if(!visible)return;const loop=Animated.loop(Animated.sequence([Animated.timing(pulse,{toValue:-5,duration:900,useNativeDriver:true}),Animated.timing(pulse,{toValue:0,duration:900,useNativeDriver:true})]));loop.start();return()=>loop.stop()},[visible,pulse]);return <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss}><View style={s.welcomeBackdrop}><View style={s.welcomeCard}><Animated.View style={[s.welcomeXis,{transform:[{translateY:pulse}]}]}><Image source={{uri:XIS_ACCESS_APPROVED}} style={s.welcomeXisImage} resizeMode="cover"/></Animated.View><Text style={s.welcomeTitle}>Oi! Eu sou o <Text style={{color:s._blue}}>Xis.</Text></Text><Text style={s.welcomeText}>Seu assessor pessoal dentro do RAIO-X. Posso te ajudar a pesquisar candidatos, comparar informações, entender dados oficiais e navegar pelo app.</Text><View style={s.welcomeHint}><Text style={s.welcomeHintIcon}>✦</Text><Text style={s.welcomeHintText}>Sempre que precisar, é só me chamar pelo botão flutuante.</Text></View><TouchableOpacity style={s.welcomeButton} onPress={onDismiss}><Text style={s.welcomeButtonText}>Ok, obrigado</Text></TouchableOpacity></View></View></Modal>}'''
-new_welcome = '''function XisWelcome({visible,onDismiss}){const s=useStyles();const player=useVideoPlayer(require('./assets/xis-intro-v9.mp4'),p=>{p.loop=false;p.muted=false;p.volume=1});useEffect(()=>{try{if(visible){player.currentTime=0;player.play()}else player.pause()}catch{}},[visible,player]);return <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss}><View style={s.welcomeBackdrop}><View style={s.welcomeCard}><View style={s.welcomeVideoFrame}><VideoView player={player} style={s.welcomeVideo} nativeControls={false} contentFit="contain" allowsFullscreen={false} allowsPictureInPicture={false}/></View><Text style={s.welcomeTitle}>Oi! Eu sou o <Text style={{color:s._blue}}>Xis.</Text></Text><Text style={s.welcomeText}>Seu assessor pessoal dentro do RAIO-X. Posso te ajudar a pesquisar candidatos, comparar informações, entender dados oficiais e navegar pelo app.</Text><View style={s.welcomeHint}><Text style={s.welcomeHintIcon}>✦</Text><Text style={s.welcomeHintText}>Sempre que precisar, é só me chamar pelo botão flutuante.</Text></View><TouchableOpacity style={s.welcomeButton} onPress={onDismiss}><Text style={s.welcomeButtonText}>Ok, obrigado</Text></TouchableOpacity></View></View></Modal>}'''
+new_welcome = '''function XisWelcome({visible,onDismiss}){const s=useStyles();const player=useVideoPlayer(require('./assets/xis-intro-v9.mp4'),p=>{p.loop=false;p.muted=false;p.volume=1});useEffect(()=>{let timer=null;try{if(visible){player.currentTime=0;player.play();timer=setTimeout(onDismiss,9000)}else player.pause()}catch{}return()=>{if(timer)clearTimeout(timer)}},[visible,player,onDismiss]);return <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss}><View style={s.welcomeBackdrop}><View style={s.welcomeVideoCard}><VideoView player={player} style={s.welcomeVideo} nativeControls={false} contentFit="contain" allowsFullscreen={false} allowsPictureInPicture={false}/><TouchableOpacity style={s.welcomeClose} onPress={onDismiss} accessibilityLabel="Fechar apresentação do Xis"><Text style={s.welcomeCloseText}>×</Text></TouchableOpacity></View></View></Modal>}'''
 replace_once('AppV020.js', old_welcome, new_welcome, 'Xis welcome image to video')
 
 # Bump the intro key so existing v0.3.24 users see the new approved video once.
@@ -35,7 +35,7 @@ replace_once('AppV020.js', 'raiox.xis.intro.v1.${raw}', 'raiox.xis.intro.v2.${ra
 replace_once(
     'AppV020.js',
     "welcomeXis:{width:220,height:236,borderRadius:30,overflow:'hidden',backgroundColor:'#fff',marginTop:-2},welcomeXisImage:{width:'100%',height:'100%'},",
-    "welcomeVideoFrame:{width:'100%',maxWidth:230,aspectRatio:9/16,borderRadius:26,overflow:'hidden',backgroundColor:'#071426',marginTop:-2,borderWidth:1,borderColor:t.borderSoft},welcomeVideo:{width:'100%',height:'100%'},",
+    "welcomeVideoCard:{width:'100%',maxWidth:300,aspectRatio:9/16,borderRadius:26,overflow:'hidden',backgroundColor:'#071426',borderWidth:1,borderColor:t.borderSoft,shadowColor:t.shadow,shadowOpacity:.28,shadowRadius:22,elevation:16},welcomeVideo:{width:'100%',height:'100%'},welcomeClose:{position:'absolute',right:10,top:10,width:34,height:34,borderRadius:17,backgroundColor:'rgba(0,0,0,.55)',alignItems:'center',justifyContent:'center'},welcomeCloseText:{color:'#fff',fontSize:25,lineHeight:28,fontWeight:'700'},",
     'welcome video styles',
 )
 replace_once('AppV020.js', "const VERSION='0.3.24';", "const VERSION='0.3.25';", 'visible app version')
@@ -58,7 +58,7 @@ pkg['dependencies']['expo-video'] = '~56.1.2'
 pkg_path.write_text(json.dumps(pkg, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
 video = Path('assets/xis-intro-v9.mp4')
-if not video.exists() or video.stat().st_size < 300_000:
+if not video.exists() or video.stat().st_size < 120_000:
     raise SystemExit('Approved Xis intro video is missing or incomplete')
 
 print('RAIO-X v0.3.25: approved Xis video intro + update-safe Android version applied')
