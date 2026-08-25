@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
       - name: Checkout
@@ -29,44 +29,61 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Restore approved visual assets
+      - name: Restore app icon
         working-directory: app
         run: |
           mkdir -p assets
           base64 -d assets/raiox-icon.png.b64 > assets/raiox-icon.png
-          base64 -d assets/xis-avatar.jpg.b64 > assets/xis-avatar.jpg
           test -s assets/raiox-icon.png
-          test -s assets/xis-avatar.jpg
           file assets/raiox-icon.png | grep -q PNG
-          file assets/xis-avatar.jpg | grep -q JPEG
 
-      - name: Apply approved Xis v0.3.19 UI
+      - name: Apply v0.3.24 final patch
         working-directory: app
         run: |
-          python3 patch_v019.py
-          grep -q "const XIS_AVATAR=require('./assets/xis-avatar.jpg')" App.js
-          grep -q 'Fala com o Xis' App.js
-          grep -q 'v0.3.19' App.js
-          grep -q "APP_VERSION='0.3.19'" AuthGate.js
-          grep -q 'Local, TSE e cache são ilimitados' App.js
-          if grep -q 'function XisFace({large=false}).*xisAntenna' App.js; then echo 'Legacy block Xis still present'; exit 1; fi
+          python3 patch_v024.py
 
-      - name: Verify RAIO-X v0.3.19 source
+      - name: Verify RAIO-X v0.3.24 final source
         working-directory: app
         run: |
-          grep -q '"version": "0.3.19"' app.json
-          grep -q '"versionCode": 23' app.json
-          grep -q '"xisUi": "official-v019"' app.json
-          grep -q '"xisAiPolicy": "local-tse-cache-ai"' app.json
-          grep -q '"version": "0.3.19"' package.json
-          grep -q '"expo-local-authentication": "~56.0.4"' package.json
-          grep -q '"expo-secure-store": "~56.0.4"' package.json
-          grep -q '"react-native": "0.85.3"' package.json
-          grep -q 'googleServicesFile' app.json
-          grep -q '@react-native-google-signin/google-signin' package.json
+          grep -q '"version": "0.3.24"' app.json
+          grep -q '"versionCode": 28' app.json
+          grep -q '"candidateBatch": 15' app.json
+          grep -q '"candidatePhotos": "mg-deputies-official-v023"' app.json
+          grep -q '"metricLayout": "wide-patrimonio-v024"' app.json
+          grep -q '"release": "final-v024"' app.json
+          grep -q '"biometricVisual": "xis-owner-v023"' app.json
+          grep -q '"accessMethod": "dynamic-biometric-faceid-v023"' app.json
+          grep -q '"xisIntro": "first-login-per-user-v023"' app.json
+          grep -q '"appearance": "light-dark-automatic"' app.json
+          grep -q '"version": "0.3.24"' package.json
+          grep -q "SafeAreaProvider" index.js
+          grep -q "XIS_ACCESS_APPROVED" AuthGateV020.js
+          grep -q "supportedAuthenticationTypesAsync" AuthGateV020.js
+          grep -q "Quer usar o Face ID" AuthGateV020.js
+          grep -q "Quer usar a biometria" AuthGateV020.js
+          grep -q "XisWelcome" AppV020.js
+          grep -q "Seu assessor pessoal dentro do RAIO-X" AppV020.js
+          grep -q "Ok, obrigado" AppV020.js
+          grep -q "const BATCH_SIZE=15" AppV020.js
+          grep -q "FlatList data={visible}" AppV020.js
+          grep -q "maxToRenderPerBatch={BATCH_SIZE}" AppV020.js
+          grep -q "DEPUTADO FEDERAL','DEPUTADO ESTADUAL" build_snapshot.py
+          grep -q "compact&&s.metricCompact" AppV020.js
+          grep -q "moneyValue&&s.metricMoney" AppV020.js
+          grep -q "metricCompact:{flex:.72}" AppV020.js
+          grep -q "metricMoney:{flex:1.72}" AppV020.js
+          grep -q "minimumFontScale={.62}" AppV020.js
+          grep -q "Configurações" AppV020.js
+          grep -q "Sobre o app" AppV020.js
+          grep -q "Sair da conta" AppV020.js
+          grep -q "Automático" AppV020.js
           grep -q "HOURLY_LIMIT=10" XisEngine.js
           grep -q "DAILY_LIMIT=25" XisEngine.js
           grep -q "raiox-xis-ai.vercel.app/api/xis" XisEngine.js
+          grep -q '"expo-local-authentication": "~56.0.4"' package.json
+          grep -q '"expo-secure-store": "~56.0.4"' package.json
+          grep -q '"react-native-safe-area-context": "~5.7.0"' package.json
+          grep -q '"react-native": "0.85.3"' package.json
           if grep -q '"firebase"' package.json; then echo 'Firebase JS SDK must not be bundled'; exit 1; fi
 
       - name: Generate audited TSE snapshot and official photos
@@ -76,6 +93,18 @@ jobs:
           test -s tse_candidates_2026.json
           test -s candidate_photos.js
           grep -q "130002539775" candidate_photos.js
+          python3 - <<'PY'
+          import json
+          data=json.load(open('tse_candidates_2026.json',encoding='utf-8'))
+          photos=open('candidate_photos.js',encoding='utf-8').read()
+          for office in ('DEPUTADO FEDERAL','DEPUTADO ESTADUAL'):
+              first=sorted([c for c in data if c.get('uf')=='MG' and c.get('office')==office],key=lambda c:c.get('name',''))[:15]
+              missing=[c['name'] for c in first if f"'{c['id']}':" not in photos]
+              print(office,'initial batch',len(first),'missing photos',len(missing))
+              if len(first)<10 or missing:
+                  raise SystemExit(f'Fotos oficiais ausentes no primeiro lote de {office}: {missing[:5]}')
+          print('candidate photo mappings',photos.count("require('./assets/candidate_photos/"))
+          PY
 
       - name: Install dependencies
         working-directory: app
@@ -86,6 +115,7 @@ jobs:
         run: |
           node -p "require('./node_modules/expo-local-authentication/package.json').version" | grep -q '^56\.0\.'
           node -p "require('./node_modules/expo-secure-store/package.json').version" | grep -q '^56\.0\.'
+          node -p "require('./node_modules/react-native-safe-area-context/package.json').version" | grep -q '^5\.7\.'
           npx expo install --check
 
       - name: Expo prebuild Android
@@ -110,23 +140,25 @@ jobs:
           chmod +x gradlew
           ./gradlew :app:assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon --max-workers=2 --stacktrace --console=plain
 
-      - name: Verify APK and Xis build marker
+      - name: Verify APK metadata
         run: |
           APK="app/android/app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           unzip -l "$APK" | grep -E 'index.android.bundle|assets/.+\.bundle'
-          unzip -p "$APK" assets/app.config | grep -q '"version":"0.3.19"'
-          unzip -p "$APK" assets/app.config | grep -q '"versionCode":23'
-          unzip -p "$APK" assets/app.config | grep -q '"xisUi":"official-v019"'
-          unzip -p "$APK" assets/app.config | grep -q '"xisAiPolicy":"local-tse-cache-ai"'
-          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.19-XIS-OFICIAL.apk
-          sha256sum RAIO-X-Eleicoes-2026-v0.3.19-XIS-OFICIAL.apk
-          ls -lh RAIO-X-Eleicoes-2026-v0.3.19-XIS-OFICIAL.apk
+          unzip -p "$APK" assets/app.config | grep -q '"version":"0.3.24"'
+          unzip -p "$APK" assets/app.config | grep -q '"versionCode":28'
+          unzip -p "$APK" assets/app.config | grep -q '"candidateBatch":15'
+          unzip -p "$APK" assets/app.config | grep -q '"candidatePhotos":"mg-deputies-official-v023"'
+          unzip -p "$APK" assets/app.config | grep -q '"metricLayout":"wide-patrimonio-v024"'
+          unzip -p "$APK" assets/app.config | grep -q '"release":"final-v024"'
+          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.24-FINAL.apk
+          sha256sum RAIO-X-Eleicoes-2026-v0.3.24-FINAL.apk
+          ls -lh RAIO-X-Eleicoes-2026-v0.3.24-FINAL.apk
 
       - name: Upload workflow APK
         uses: actions/upload-artifact@v4
         with:
-          name: RAIO-X-Eleicoes-2026-v0.3.19-XIS-OFICIAL-APK
-          path: RAIO-X-Eleicoes-2026-v0.3.19-XIS-OFICIAL.apk
+          name: RAIO-X-Eleicoes-2026-v0.3.24-FINAL-APK
+          path: RAIO-X-Eleicoes-2026-v0.3.24-FINAL.apk
           if-no-files-found: error
           retention-days: 14
