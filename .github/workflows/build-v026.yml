@@ -1,0 +1,123 @@
+name: Build RAIO-X v0.3.26 APK
+
+on:
+  push:
+    branches: [v0.3.26-xis-voz]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Restore bundled assets
+        working-directory: app
+        run: |
+          mkdir -p assets
+          base64 -d assets/raiox-icon.png.b64 > assets/raiox-icon.png
+          cat assets/xis-v025-chunk00.b64 assets/xis-v025-chunk01.b64 assets/xis-v025-chunk02.b64 assets/xis-v025-chunk03.b64 assets/xis-v025-chunk04.b64 assets/xis-v025-chunk05.b64 > assets/xis-intro-v9.complete.b64
+          base64 -d assets/xis-intro-v9.complete.b64 > assets/xis-intro-v9.mp4
+          base64 -d assets/xis-oficial-v026.webp.b64 > assets/xis-oficial-v026.webp
+          test -s assets/raiox-icon.png
+          test -s assets/xis-intro-v9.mp4
+          test -s assets/xis-oficial-v026.webp
+          echo '60f88c85dbb0e6fbbc92b811a35f6d1df312b7debfe568963cfb0d9b958e4c0f  assets/xis-intro-v9.mp4' | sha256sum -c -
+          echo 'd8fcdd395032c3e2421731261b484ae2d12069d52c025b41251aa9a318244acd  assets/xis-oficial-v026.webp' | sha256sum -c -
+
+      - name: Apply v0.3.26 patch
+        working-directory: app
+        run: python3 patch_v026.py
+
+      - name: Verify v0.3.26 source
+        working-directory: app
+        run: |
+          grep -q '"version": "0.3.26"' app.json
+          grep -q '"versionCode": 30' app.json
+          grep -q '"version": "0.3.26"' package.json
+          grep -q '"expo-speech": "~56.0.3"' package.json
+          grep -q '"expo-speech-recognition": "56.0.1"' package.json
+          grep -q '"xisVoice": "native-stt-tts-ptbr-v026"' app.json
+          grep -q '"xisVisual": "official-full-body-v026"' app.json
+          grep -q 'expo-speech-recognition' app.json
+          grep -q 'ExpoSpeechRecognitionModule' AppV020.js
+          grep -q 'useSpeechRecognitionEvent' AppV020.js
+          grep -q 'XisOfficial' AppV020.js
+          grep -q 'FALAR' AppV020.js
+          grep -q 'Ouvir Xis' AppV020.js
+          grep -q "const VERSION='0.3.26'" AppV020.js
+          grep -q "const APP_VERSION='0.3.26'" AuthGateV020.js
+          grep -q "'X-App-Version':'0.3.26'" XisEngine.js
+
+      - name: Generate audited TSE snapshot and photos
+        working-directory: app
+        run: |
+          python3 build_snapshot.py
+          test -s tse_candidates_2026.json
+          test -s candidate_photos.js
+
+      - name: Install dependencies
+        working-directory: app
+        run: npm install --no-audit --no-fund --legacy-peer-deps
+
+      - name: Verify voice native modules
+        working-directory: app
+        run: |
+          node -p "require('./node_modules/expo-speech/package.json').version" | grep -q '^56\.0\.'
+          node -p "require('./node_modules/expo-speech-recognition/package.json').version" | grep -q '^56\.0\.1$'
+
+      - name: Expo prebuild Android
+        working-directory: app
+        env:
+          CI: '1'
+        run: npx expo prebuild --platform android --clean
+
+      - name: Verify microphone and speech wiring
+        working-directory: app
+        run: |
+          test -s android/app/google-services.json
+          grep -q 'com.raiox2026.app' android/app/google-services.json
+          grep -q 'android.permission.RECORD_AUDIO' android/app/src/main/AndroidManifest.xml
+          grep -q 'com.google.android.googlequicksearchbox' android/app/src/main/AndroidManifest.xml
+
+      - name: Build release APK
+        working-directory: app/android
+        env:
+          NODE_ENV: production
+          NODE_OPTIONS: --max-old-space-size=4096
+          JAVA_TOOL_OPTIONS: -Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon --max-workers=2 --stacktrace --console=plain
+
+      - name: Prepare APK
+        run: |
+          APK="app/android/app/build/outputs/apk/release/app-release.apk"
+          test -s "$APK"
+          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.26-XIS-VOZ.apk
+          sha256sum RAIO-X-Eleicoes-2026-v0.3.26-XIS-VOZ.apk
+          ls -lh RAIO-X-Eleicoes-2026-v0.3.26-XIS-VOZ.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: RAIO-X-Eleicoes-2026-v0.3.26-XIS-VOZ-APK
+          path: RAIO-X-Eleicoes-2026-v0.3.26-XIS-VOZ.apk
+          if-no-files-found: error
+          retention-days: 14
