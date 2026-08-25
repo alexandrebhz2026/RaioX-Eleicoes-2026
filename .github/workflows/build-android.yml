@@ -37,28 +37,29 @@ jobs:
           test -s assets/raiox-icon.png
           file assets/raiox-icon.png | grep -q PNG
 
-      - name: Apply v0.3.21 layout safety patch
+      - name: Apply v0.3.22 approved visual patch
         working-directory: app
         run: |
-          python3 patch_v021.py
+          python3 patch_v022.py
 
-      - name: Verify RAIO-X v0.3.21 layout fix
+      - name: Verify RAIO-X v0.3.22 approved visual
         working-directory: app
         run: |
-          grep -q '"version": "0.3.21"' app.json
-          grep -q '"versionCode": 25' app.json
-          grep -q '"xisUi": "detective-clean-v021"' app.json
-          grep -q '"layoutSafety": "safe-area-v021"' app.json
+          grep -q '"version": "0.3.22"' app.json
+          grep -q '"versionCode": 26' app.json
+          grep -q '"xisUi": "detective-clean-v022"' app.json
+          grep -q '"layoutSafety": "safe-area-v022"' app.json
+          grep -q '"biometricVisual": "approved-image-v022"' app.json
           grep -q '"appearance": "light-dark-automatic"' app.json
-          grep -q '"version": "0.3.21"' package.json
+          grep -q '"version": "0.3.22"' package.json
           grep -q '"react-native-safe-area-context": "~5.7.0"' package.json
           grep -q "SafeAreaProvider" index.js
-          grep -q "react-native-safe-area-context" AppV020.js
-          grep -q "react-native-safe-area-context" AuthGateV020.js
-          grep -q "fingerprintCircle:{width:108,height:108" AuthGateV020.js
-          grep -q "xisMini:{width:56,height:65" AuthGateV020.js
-          grep -q "content:{padding:18,paddingBottom:176" AppV020.js
-          grep -q "bottom:86" AppV020.js
+          grep -q "FINGERPRINT_APPROVED" AuthGateV020.js
+          grep -q "fingerprintApproved:{width:116,height:116" AuthGateV020.js
+          grep -q "primary:{width:'100%',height:54" AuthGateV020.js
+          grep -q "content:{padding:18,paddingBottom:72" AppV020.js
+          grep -q "bottom:118" AppV020.js
+          grep -q "Detective size={40}" AppV020.js
           grep -q "Configurações" AppV020.js
           grep -q "Sobre o app" AppV020.js
           grep -q "Sair da conta" AppV020.js
@@ -118,19 +119,19 @@ jobs:
           APK="app/android/app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           unzip -l "$APK" | grep -E 'index.android.bundle|assets/.+\.bundle'
-          unzip -p "$APK" assets/app.config | grep -q '"version":"0.3.21"'
-          unzip -p "$APK" assets/app.config | grep -q '"versionCode":25'
-          unzip -p "$APK" assets/app.config | grep -q '"xisUi":"detective-clean-v021"'
-          unzip -p "$APK" assets/app.config | grep -q '"layoutSafety":"safe-area-v021"'
-          unzip -p "$APK" assets/app.config | grep -q '"appearance":"light-dark-automatic"'
-          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.21-LAYOUT-FIX.apk
-          sha256sum RAIO-X-Eleicoes-2026-v0.3.21-LAYOUT-FIX.apk
-          ls -lh RAIO-X-Eleicoes-2026-v0.3.21-LAYOUT-FIX.apk
+          unzip -p "$APK" assets/app.config | grep -q '"version":"0.3.22"'
+          unzip -p "$APK" assets/app.config | grep -q '"versionCode":26'
+          unzip -p "$APK" assets/app.config | grep -q '"xisUi":"detective-clean-v022"'
+          unzip -p "$APK" assets/app.config | grep -q '"layoutSafety":"safe-area-v022"'
+          unzip -p "$APK" assets/app.config | grep -q '"biometricVisual":"approved-image-v022"'
+          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.22-APROVADO-VISUAL.apk
+          sha256sum RAIO-X-Eleicoes-2026-v0.3.22-APROVADO-VISUAL.apk
+          ls -lh RAIO-X-Eleicoes-2026-v0.3.22-APROVADO-VISUAL.apk
 
       - name: Upload workflow APK
         uses: actions/upload-artifact@v4
         with:
-          name: RAIO-X-Eleicoes-2026-v0.3.21-LAYOUT-FIX-APK
-          path: RAIO-X-Eleicoes-2026-v0.3.21-LAYOUT-FIX.apk
+          name: RAIO-X-Eleicoes-2026-v0.3.22-APROVADO-VISUAL-APK
+          path: RAIO-X-Eleicoes-2026-v0.3.22-APROVADO-VISUAL.apk
           if-no-files-found: error
           retention-days: 14
