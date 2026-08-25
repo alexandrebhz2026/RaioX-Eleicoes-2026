@@ -32,10 +32,10 @@ jobs:
         run: |
           mkdir -p assets
           base64 -d assets/raiox-icon.png.b64 > assets/raiox-icon.png
-          base64 -d assets/xis-intro-v9-build.mp4.b64 > assets/xis-intro-v9.mp4
+          base64 -d -i assets/xis-intro-v9-build.mp4.b64 > assets/xis-intro-v9.mp4
           test -s assets/raiox-icon.png
           test -s assets/xis-intro-v9.mp4
-          test "$(stat -c%s assets/xis-intro-v9.mp4)" -gt 30000
+          echo '60f88c85dbb0e6fbbc92b811a35f6d1df312b7debfe568963cfb0d9b958e4c0f  assets/xis-intro-v9.mp4' | sha256sum -c -
 
       - name: Apply v0.3.25 patch
         working-directory: app
