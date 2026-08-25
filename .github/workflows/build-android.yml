@@ -37,23 +37,32 @@ jobs:
           test -s assets/raiox-icon.png
           file assets/raiox-icon.png | grep -q PNG
 
-      - name: Verify RAIO-X v0.3.20 approved redesign
+      - name: Apply v0.3.21 layout safety patch
         working-directory: app
         run: |
-          grep -q '"version": "0.3.20"' app.json
-          grep -q '"versionCode": 24' app.json
-          grep -q '"xisUi": "detective-clean-v020"' app.json
+          python3 patch_v021.py
+
+      - name: Verify RAIO-X v0.3.21 layout fix
+        working-directory: app
+        run: |
+          grep -q '"version": "0.3.21"' app.json
+          grep -q '"versionCode": 25' app.json
+          grep -q '"xisUi": "detective-clean-v021"' app.json
+          grep -q '"layoutSafety": "safe-area-v021"' app.json
           grep -q '"appearance": "light-dark-automatic"' app.json
-          grep -q '"version": "0.3.20"' package.json
-          grep -q "require('./AppV020')" index.js
-          grep -q "AuthGateV020" index.js
-          grep -q "ThemeProvider" index.js
-          grep -q "XIS_DETECTIVE" AppV020.js
+          grep -q '"version": "0.3.21"' package.json
+          grep -q '"react-native-safe-area-context": "~5.7.0"' package.json
+          grep -q "SafeAreaProvider" index.js
+          grep -q "react-native-safe-area-context" AppV020.js
+          grep -q "react-native-safe-area-context" AuthGateV020.js
+          grep -q "fingerprintCircle:{width:108,height:108" AuthGateV020.js
+          grep -q "xisMini:{width:56,height:65" AuthGateV020.js
+          grep -q "content:{padding:18,paddingBottom:176" AppV020.js
+          grep -q "bottom:86" AppV020.js
           grep -q "Configurações" AppV020.js
           grep -q "Sobre o app" AppV020.js
           grep -q "Sair da conta" AppV020.js
           grep -q "Automático" AppV020.js
-          grep -q "Acesso seguro" AuthGateV020.js
           grep -q "HOURLY_LIMIT=10" XisEngine.js
           grep -q "DAILY_LIMIT=25" XisEngine.js
           grep -q "raiox-xis-ai.vercel.app/api/xis" XisEngine.js
@@ -79,6 +88,7 @@ jobs:
         run: |
           node -p "require('./node_modules/expo-local-authentication/package.json').version" | grep -q '^56\.0\.'
           node -p "require('./node_modules/expo-secure-store/package.json').version" | grep -q '^56\.0\.'
+          node -p "require('./node_modules/react-native-safe-area-context/package.json').version" | grep -q '^5\.7\.'
           npx expo install --check
 
       - name: Expo prebuild Android
@@ -108,18 +118,19 @@ jobs:
           APK="app/android/app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           unzip -l "$APK" | grep -E 'index.android.bundle|assets/.+\.bundle'
-          unzip -p "$APK" assets/app.config | grep -q '"version":"0.3.20"'
-          unzip -p "$APK" assets/app.config | grep -q '"versionCode":24'
-          unzip -p "$APK" assets/app.config | grep -q '"xisUi":"detective-clean-v020"'
+          unzip -p "$APK" assets/app.config | grep -q '"version":"0.3.21"'
+          unzip -p "$APK" assets/app.config | grep -q '"versionCode":25'
+          unzip -p "$APK" assets/app.config | grep -q '"xisUi":"detective-clean-v021"'
+          unzip -p "$APK" assets/app.config | grep -q '"layoutSafety":"safe-area-v021"'
           unzip -p "$APK" assets/app.config | grep -q '"appearance":"light-dark-automatic"'
-          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.20-APROVADO.apk
-          sha256sum RAIO-X-Eleicoes-2026-v0.3.20-APROVADO.apk
-          ls -lh RAIO-X-Eleicoes-2026-v0.3.20-APROVADO.apk
+          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.21-LAYOUT-FIX.apk
+          sha256sum RAIO-X-Eleicoes-2026-v0.3.21-LAYOUT-FIX.apk
+          ls -lh RAIO-X-Eleicoes-2026-v0.3.21-LAYOUT-FIX.apk
 
       - name: Upload workflow APK
         uses: actions/upload-artifact@v4
         with:
-          name: RAIO-X-Eleicoes-2026-v0.3.20-APROVADO-APK
-          path: RAIO-X-Eleicoes-2026-v0.3.20-APROVADO.apk
+          name: RAIO-X-Eleicoes-2026-v0.3.21-LAYOUT-FIX-APK
+          path: RAIO-X-Eleicoes-2026-v0.3.21-LAYOUT-FIX.apk
           if-no-files-found: error
           retention-days: 14
