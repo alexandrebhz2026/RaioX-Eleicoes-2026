@@ -44,7 +44,7 @@ jobs:
 
       - name: Apply v0.3.32 patch
         working-directory: app
-        run: python3 patch_v032.py
+        run: python3 patch_v032_location.py
 
       - name: Verify v0.3.32 source
         working-directory: app
@@ -52,6 +52,7 @@ jobs:
           grep -q '"version": "0.3.32"' app.json
           grep -q '"versionCode": 36' app.json
           grep -q '"version": "0.3.32"' package.json
+          grep -q '"expo-location": "~56.0.23"' package.json
           grep -q "const VERSION='0.3.32'" AppV020.js
           grep -q "const APP_VERSION='0.3.32'" AuthGateV020.js
           grep -q "'X-App-Version':'0.3.32'" XisEngine.js
@@ -62,6 +63,10 @@ jobs:
           grep -q "GOVERNADOR:MG" AppV020.js
           grep -q "MG-00446/2026" AppV020.js
           grep -q "MG-03490/2026" AppV020.js
+          grep -q "requestForegroundPermissionsAsync" AppV020.js
+          grep -q "reverseGeocodeAsync" AppV020.js
+          grep -q "USAR MEU ESTADO" AppV020.js
+          grep -q "As coordenadas não são enviadas ao nosso servidor" AppV020.js
 
       - name: Generate audited TSE snapshot and photos
         working-directory: app
@@ -86,6 +91,8 @@ jobs:
           test -s android/app/google-services.json
           grep -q 'com.raiox2026.app' android/app/google-services.json
           grep -q 'android.permission.RECORD_AUDIO' android/app/src/main/AndroidManifest.xml
+          grep -q 'android.permission.ACCESS_COARSE_LOCATION' android/app/src/main/AndroidManifest.xml
+          grep -q 'android.permission.ACCESS_FINE_LOCATION' android/app/src/main/AndroidManifest.xml
 
       - name: Build release APK
         working-directory: app/android
@@ -101,14 +108,14 @@ jobs:
         run: |
           APK="app/android/app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
-          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.32-PESQUISAS-PREMIUM.apk
-          sha256sum RAIO-X-Eleicoes-2026-v0.3.32-PESQUISAS-PREMIUM.apk
-          ls -lh RAIO-X-Eleicoes-2026-v0.3.32-PESQUISAS-PREMIUM.apk
+          cp "$APK" RAIO-X-Eleicoes-2026-v0.3.32-PESQUISAS-PREMIUM-LOCALIZACAO.apk
+          sha256sum RAIO-X-Eleicoes-2026-v0.3.32-PESQUISAS-PREMIUM-LOCALIZACAO.apk
+          ls -lh RAIO-X-Eleicoes-2026-v0.3.32-PESQUISAS-PREMIUM-LOCALIZACAO.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: RAIO-X-Eleicoes-2026-v0.3.32-PESQUISAS-PREMIUM-APK
-          path: RAIO-X-Eleicoes-2026-v0.3.32-PESQUISAS-PREMIUM.apk
+          name: RAIO-X-Eleicoes-2026-v0.3.32-PESQUISAS-PREMIUM-LOCALIZACAO-APK
+          path: RAIO-X-Eleicoes-2026-v0.3.32-PESQUISAS-PREMIUM-LOCALIZACAO.apk
           if-no-files-found: error
           retention-days: 14
