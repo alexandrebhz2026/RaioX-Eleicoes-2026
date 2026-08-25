@@ -63,8 +63,9 @@ jobs:
           grep -q "LIVE_RESULTS_API" AppV020.js
           grep -q "function FavoritesScreen" AppV020.js
           grep -q "FAVORITES_KEY" AppV020.js
-          grep -q "FavoriteButton" AppV020.js
-          grep -q "APURAÇÃO AO VIVO" AppV020.js
+          grep -q "function useFavorites" AppV020.js
+          grep -q "★ FAVORITO" AppV020.js
+          grep -q "tab==='Favoritos'" AppV020.js
           grep -q "expo-location" package.json
 
       - name: Generate audited TSE snapshot and photos
