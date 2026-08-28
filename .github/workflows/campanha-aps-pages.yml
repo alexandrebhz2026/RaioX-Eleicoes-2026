@@ -1,0 +1,43 @@
+name: Publicar Campanha APS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: campanha-aps-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout da versao publica
+        uses: actions/checkout@v4
+        with:
+          ref: campanha-aps-public
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - name: Preparar site
+        run: |
+          mkdir -p _site
+          cp campanha-aps/index.html _site/index.html
+          touch _site/.nojekyll
+      - name: Enviar artefato
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: Publicar
+        id: deployment
+        uses: actions/deploy-pages@v4
