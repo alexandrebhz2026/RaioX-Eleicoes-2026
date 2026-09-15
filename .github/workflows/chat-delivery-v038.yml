@@ -1,0 +1,30 @@
+name: Chat delivery v0.3.38 AAB
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/chat-delivery-v038.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deliver:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download exact public release AAB
+        run: |
+          set -euo pipefail
+          URL='https://github.com/alexandrebhz2026/RaioX-Eleicoes-2026/releases/download/v0.3.38-playstore-build42/RAIO-X-Eleicoes-2026-v0.3.38-TEMPO-REAL-PlayStore.aab'
+          curl -L --fail --retry 3 "$URL" -o RAIO-X-Eleicoes-2026-v0.3.38-TEMPO-REAL-PlayStore.aab
+          echo '93094fca18be274a8fb3a9e87dcec8e972f5b50671c00be2b44be9107cd50176  RAIO-X-Eleicoes-2026-v0.3.38-TEMPO-REAL-PlayStore.aab' | sha256sum -c -
+      - name: Upload chat delivery artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RAIO-X-v0.3.38-Google-Play-AAB
+          path: RAIO-X-Eleicoes-2026-v0.3.38-TEMPO-REAL-PlayStore.aab
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
