@@ -39,6 +39,18 @@ body{display:flex;justify-content:center}
 .btn.mine{background:var(--red);color:#fff}
 .btn.blank{background:#fff;color:var(--red);border:1.5px solid #e2a4aa}
 .note{margin:9px 8px 0;color:#999;font-size:10.5px;line-height:1.35;text-align:center}
+.shareModal{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:18px}
+.shareModal[hidden]{display:none}
+.shareBackdrop{position:absolute;inset:0;background:rgba(20,20,24,.72);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.shareBox{position:relative;width:min(100%,420px);max-height:92vh;overflow:auto;background:#fff;border-radius:20px;padding:14px;box-shadow:0 24px 70px rgba(0,0,0,.35)}
+.shareBoxHead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.shareBoxHead strong{font-size:16px}
+.closeShare{width:36px;height:36px;border:0;border-radius:10px;background:#f1f1f4;color:#333;font-size:24px;line-height:1;cursor:pointer}
+.sharePreview{background:#f2f2f5;border-radius:14px;padding:8px;display:grid;place-items:center}
+.sharePreview img{display:block;width:100%;height:auto;max-height:58vh;object-fit:contain;border-radius:10px;background:#fff}
+.shareStatus{margin:10px 3px 0;color:#666;font-size:11.5px;line-height:1.35;text-align:center}
+.shareModalActions{display:grid;gap:8px;margin-top:11px}
+.btn:disabled{opacity:.58;cursor:wait}
 @media(max-width:370px){
  .page{padding-left:7px;padding-right:7px}
  .hero h1{font-size:25px}
@@ -104,6 +116,22 @@ body{display:flex;justify-content:center}
       <p class="note">Confira os números antes de votar. A imagem compartilhada serve apenas como anotação.</p>
     </div>
   </section>
+
+  <div class="shareModal" id="shareModal" hidden>
+    <div class="shareBackdrop" data-close-share></div>
+    <section class="shareBox" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
+      <div class="shareBoxHead">
+        <strong id="shareTitle">Compartilhar colinha</strong>
+        <button class="closeShare" id="closeShareBtn" type="button" aria-label="Fechar">×</button>
+      </div>
+      <div class="sharePreview"><img id="sharePreviewImg" alt="Prévia da colinha para compartilhar"></div>
+      <p class="shareStatus" id="shareStatus">Imagem pronta para compartilhar.</p>
+      <div class="shareModalActions">
+        <button class="btn mine" id="confirmShareBtn" type="button">Compartilhar imagem</button>
+        <button class="btn save" id="downloadShareBtn" type="button">Baixar imagem</button>
+      </div>
+    </section>
+  </div>
 </main>
 
 <script>
@@ -277,21 +305,103 @@ function downloadBlob(blob,name){
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href),1500);
 }
-async function shareBlob(blob,name,text){
-  const file=new File([blob],name,{type:'image/png'});
-  try{
-    if(navigator.canShare&&navigator.canShare({files:[file]})&&navigator.share){
-      await navigator.share({files:[file],title:'Minha colinha',text});
-    }else if(navigator.share){
-      await navigator.share({title:'Minha colinha',text,url:location.href});
-    }else{
-      downloadBlob(blob,name);
-    }
-  }catch(e){ if(e?.name!=='AbortError') downloadBlob(blob,name); }
+const shareModal=document.getElementById('shareModal');
+const sharePreviewImg=document.getElementById('sharePreviewImg');
+const shareTitle=document.getElementById('shareTitle');
+const shareStatus=document.getElementById('shareStatus');
+const confirmShareBtn=document.getElementById('confirmShareBtn');
+const downloadShareBtn=document.getElementById('downloadShareBtn');
+const closeShareBtn=document.getElementById('closeShareBtn');
+let pendingShare=null;
+let sharePreviewUrl='';
+
+function closeShareModal(){
+  shareModal.hidden=true;
+  pendingShare=null;
+  if(sharePreviewUrl){URL.revokeObjectURL(sharePreviewUrl);sharePreviewUrl='';}
+  sharePreviewImg.removeAttribute('src');
+  shareStatus.textContent='Imagem pronta para compartilhar.';
+  confirmShareBtn.disabled=false;
 }
-document.getElementById('saveBtn').addEventListener('click',async()=>{trackEvent('save_gallery');downloadBlob(await makeCard(false),'minha-colinha-2026.png')});
-document.getElementById('shareMineBtn').addEventListener('click',async()=>{trackEvent('share_mine');shareBlob(await makeCard(false),'minha-colinha-2026.png','Minha colinha de votação 2026.')});
-document.getElementById('shareBlankBtn').addEventListener('click',async()=>{trackEvent('share_blank');shareBlob(await makeCard(true),'colinha-em-branco-2026.png','Colinha de votação 2026.')});
+function canShareFile(file){
+  try{
+    if(!navigator.share) return false;
+    if(!navigator.canShare) return true;
+    return navigator.canShare({files:[file]});
+  }catch(e){ return false; }
+}
+async function openSharePreview(blank,name,text,title,trigger){
+  const original=trigger.textContent;
+  trigger.disabled=true;
+  trigger.textContent='Preparando imagem…';
+  try{
+    const blob=await makeCard(blank);
+    if(!blob) throw new Error('Imagem vazia');
+    if(sharePreviewUrl) URL.revokeObjectURL(sharePreviewUrl);
+    sharePreviewUrl=URL.createObjectURL(blob);
+    pendingShare={blob,name,text};
+    sharePreviewImg.src=sharePreviewUrl;
+    shareTitle.textContent=title;
+    shareStatus.textContent='Imagem pronta. Toque em “Compartilhar imagem”.';
+    shareModal.hidden=false;
+  }catch(e){
+    console.error('Falha ao preparar compartilhamento',e);
+    alert('Não foi possível preparar a imagem. Tente novamente.');
+  }finally{
+    trigger.disabled=false;
+    trigger.textContent=original;
+  }
+}
+
+confirmShareBtn.addEventListener('click',async()=>{
+  if(!pendingShare) return;
+  const {blob,name,text}=pendingShare;
+  const file=new File([blob],name,{type:'image/png'});
+  if(!canShareFile(file)){
+    downloadBlob(blob,name);
+    shareStatus.textContent='Seu navegador não compartilha arquivos diretamente. A imagem foi baixada para você enviar.';
+    return;
+  }
+  confirmShareBtn.disabled=true;
+  shareStatus.textContent='Abrindo opções de compartilhamento…';
+  try{
+    await navigator.share({files:[file],title:'Minha colinha',text});
+    shareStatus.textContent='Compartilhamento concluído.';
+    setTimeout(closeShareModal,450);
+  }catch(e){
+    if(e?.name==='AbortError'){
+      shareStatus.textContent='Compartilhamento cancelado. A imagem continua pronta aqui.';
+    }else{
+      console.error('Falha no compartilhamento nativo',e);
+      downloadBlob(blob,name);
+      shareStatus.textContent='O compartilhamento foi bloqueado pelo navegador. A imagem foi baixada para você enviar.';
+    }
+  }finally{
+    confirmShareBtn.disabled=false;
+  }
+});
+downloadShareBtn.addEventListener('click',()=>{
+  if(!pendingShare) return;
+  downloadBlob(pendingShare.blob,pendingShare.name);
+  shareStatus.textContent='Imagem baixada.';
+});
+closeShareBtn.addEventListener('click',closeShareModal);
+shareModal.querySelector('[data-close-share]').addEventListener('click',closeShareModal);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!shareModal.hidden)closeShareModal()});
+
+document.getElementById('saveBtn').addEventListener('click',async()=>{
+  trackEvent('save_gallery');
+  const blob=await makeCard(false);
+  if(blob) downloadBlob(blob,'minha-colinha-2026.png');
+});
+document.getElementById('shareMineBtn').addEventListener('click',async e=>{
+  trackEvent('share_mine');
+  await openSharePreview(false,'minha-colinha-2026.png','Minha colinha de votação 2026.','Compartilhar minha colinha',e.currentTarget);
+});
+document.getElementById('shareBlankBtn').addEventListener('click',async e=>{
+  trackEvent('share_blank');
+  await openSharePreview(true,'colinha-em-branco-2026.png','Colinha de votação 2026.','Compartilhar em branco',e.currentTarget);
+});
 </script>
 </body>
 </html>
