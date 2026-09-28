@@ -41,6 +41,8 @@ jobs:
           cp campanha-aps/index.html _site/index.html
           mkdir -p _site/painel-colinhas-engajamento
           cp repo-main/painel-colinhas-engajamento/index.html _site/painel-colinhas-engajamento/index.html
+          mkdir -p _site/ana-paula
+          cp repo-main/colinha-ana-paula-pages/index.html _site/ana-paula/index.html
           touch _site/.nojekyll
       - name: Enviar artefato
         uses: actions/upload-pages-artifact@v3
