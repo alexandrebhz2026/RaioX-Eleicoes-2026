@@ -25,6 +25,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: campanha-aps-public
+      - name: Checkout dos arquivos auxiliares
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: repo-main
+
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
         with:
@@ -33,6 +39,8 @@ jobs:
         run: |
           mkdir -p _site
           cp campanha-aps/index.html _site/index.html
+          mkdir -p _site/painel-colinhas-engajamento
+          cp repo-main/painel-colinhas-engajamento/index.html _site/painel-colinhas-engajamento/index.html
           touch _site/.nojekyll
       - name: Enviar artefato
         uses: actions/upload-pages-artifact@v3
