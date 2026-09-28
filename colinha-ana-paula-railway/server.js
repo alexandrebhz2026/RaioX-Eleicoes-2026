@@ -1,0 +1,64 @@
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+
+const port = process.env.PORT || 3000;
+const indexPath = path.join(__dirname, 'index.html');
+const indexHtml = fs.readFileSync(indexPath);
+
+function json(res, status, body) {
+  res.statusCode = status;
+  res.setHeader('content-type', 'application/json; charset=utf-8');
+  res.setHeader('cache-control', 'no-store, max-age=0');
+  res.end(JSON.stringify(body));
+}
+
+const server = http.createServer(async (req, res) => {
+  try {
+    const url = new URL(req.url, 'http://localhost');
+
+    if (url.pathname === '/health') {
+      return json(res, 200, { ok: true });
+    }
+
+    if (url.pathname === '/api/candidato') {
+      const cargo = String(url.searchParams.get('cargo') || '').toLowerCase();
+      const numero = String(url.searchParams.get('numero') || '').replace(/\D/g, '');
+      const allowed = new Set(['federal','senador','governador','presidente']);
+      if (!allowed.has(cargo) || !numero) {
+        return json(res, 400, { ok: false, error: 'Parametros invalidos' });
+      }
+
+      const upstream = new URL('https://colinha-ana-paula-siqueira.vercel.app/api/candidato');
+      upstream.searchParams.set('cargo', cargo);
+      upstream.searchParams.set('numero', numero);
+      const response = await fetch(upstream, {
+        headers: { accept: 'application/json' },
+        cache: 'no-store'
+      });
+      const body = await response.text();
+      res.statusCode = response.status;
+      res.setHeader('content-type', response.headers.get('content-type') || 'application/json; charset=utf-8');
+      res.setHeader('cache-control', 'no-store, max-age=0');
+      return res.end(body);
+    }
+
+    if (url.pathname === '/' || url.pathname === '/index.html') {
+      res.statusCode = 200;
+      res.setHeader('content-type', 'text/html; charset=utf-8');
+      res.setHeader('cache-control', 'no-store, max-age=0');
+      return res.end(indexHtml);
+    }
+
+    res.statusCode = 404;
+    res.setHeader('content-type', 'text/plain; charset=utf-8');
+    res.end('Not found');
+  } catch (error) {
+    console.error(error);
+    json(res, 500, { ok: false, error: 'Falha interna' });
+  }
+});
+
+server.listen(port, '0.0.0.0', () => {
+  console.log('Colinha Ana Paula listening on port', port);
+});
