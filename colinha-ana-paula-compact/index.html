@@ -107,6 +107,49 @@ body{display:flex;justify-content:center}
 </main>
 
 <script>
+const TRACK_URL='https://fhuxpbxydbflwhwcstps.supabase.co/functions/v1/colinha-track';
+const TRACK_KEY='ana-paula-siqueira';
+function getVisitorId(){
+  let id=localStorage.getItem('colinha26_visitor_id');
+  if(!id){
+    id=(crypto.randomUUID?crypto.randomUUID():(Date.now().toString(36)+Math.random().toString(36).slice(2)));
+    localStorage.setItem('colinha26_visitor_id',id);
+  }
+  return id;
+}
+function trackDevice(){
+  const ua=navigator.userAgent||'';
+  if(/Android/i.test(ua)) return 'android';
+  if(/iPhone|iPad|iPod/i.test(ua)) return 'ios';
+  if(/Windows|Macintosh|Linux/i.test(ua)) return 'desktop';
+  return 'other';
+}
+function trackSource(){
+  const p=new URLSearchParams(location.search);
+  const u=(p.get('utm_source')||'').toLowerCase();
+  if(u.includes('whatsapp')) return 'whatsapp';
+  if(u.includes('instagram')) return 'instagram';
+  if(u.includes('facebook')) return 'facebook';
+  if(u.includes('qr')) return 'qr';
+  if(u) return 'shared';
+  const r=(document.referrer||'').toLowerCase();
+  if(r.includes('whatsapp')) return 'whatsapp';
+  if(r.includes('instagram')) return 'instagram';
+  if(r.includes('facebook')) return 'facebook';
+  if(r) return 'shared';
+  return 'direct';
+}
+function trackEvent(event){
+  const payload={candidateKey:TRACK_KEY,event,visitorId:getVisitorId(),device:trackDevice(),source:trackSource()};
+  fetch(TRACK_URL,{
+    method:'POST',
+    headers:{'content-type':'application/json'},
+    body:JSON.stringify(payload),
+    keepalive:true
+  }).catch(()=>{});
+}
+trackEvent('view');
+
 const dynamicRows=[...document.querySelectorAll('.office[data-cargo]')];
 const rowState=new Map();
 
@@ -246,9 +289,9 @@ async function shareBlob(blob,name,text){
     }
   }catch(e){ if(e?.name!=='AbortError') downloadBlob(blob,name); }
 }
-document.getElementById('saveBtn').addEventListener('click',async()=>downloadBlob(await makeCard(false),'minha-colinha-2026.png'));
-document.getElementById('shareMineBtn').addEventListener('click',async()=>shareBlob(await makeCard(false),'minha-colinha-2026.png','Minha colinha de votação 2026.'));
-document.getElementById('shareBlankBtn').addEventListener('click',async()=>shareBlob(await makeCard(true),'colinha-em-branco-2026.png','Colinha de votação 2026.'));
+document.getElementById('saveBtn').addEventListener('click',async()=>{trackEvent('save_gallery');downloadBlob(await makeCard(false),'minha-colinha-2026.png')});
+document.getElementById('shareMineBtn').addEventListener('click',async()=>{trackEvent('share_mine');shareBlob(await makeCard(false),'minha-colinha-2026.png','Minha colinha de votação 2026.')});
+document.getElementById('shareBlankBtn').addEventListener('click',async()=>{trackEvent('share_blank');shareBlob(await makeCard(true),'colinha-em-branco-2026.png','Colinha de votação 2026.')});
 </script>
 </body>
 </html>
