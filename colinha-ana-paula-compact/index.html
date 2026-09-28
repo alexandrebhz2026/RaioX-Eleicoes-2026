@@ -21,7 +21,7 @@ body{display:flex;justify-content:center}
 .office{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 14px;border-top:1px solid var(--line);min-height:66px}
 .left{min-width:0;display:flex;align-items:center;gap:10px}
 .avatar{width:44px;height:44px;border-radius:12px;background:#eef0f3;display:grid;place-items:center;overflow:hidden;flex:0 0 auto;color:#999;font-size:13px;font-weight:850}
-.avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.avatar img{width:100%;height:100%;object-fit:cover;object-position:50% 18%;display:block}
 .info{min-width:0}
 .role{margin:0;color:#777;font-size:12px;font-weight:800;line-height:1.15}
 .primary{margin:3px 0 0;font-size:13.5px;font-weight:850;line-height:1.12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px}
@@ -72,7 +72,7 @@ body{display:flex;justify-content:center}
     <div class="office ana" data-fixed="1" data-label="Deputada estadual">
       <div class="left">
         <div class="avatar"><img src="https://divulgacandcontas.tse.jus.br/divulga/rest/arquivo/img/20322002026/130002535321/MG" alt="Ana Paula Siqueira"></div>
-        <div class="info"><p class="role">Deputada estadual</p><p class="primary">Ana Paula Siqueira</p><p class="secondary ok">13444 · número fixo</p></div>
+        <div class="info"><p class="role">Deputada estadual</p><p class="primary">Ana Paula Siqueira</p><p class="secondary ok">número fixo</p></div>
       </div>
       <div class="digits"><div class="digit fixed">1</div><div class="digit fixed">3</div><div class="digit fixed">4</div><div class="digit fixed">4</div><div class="digit fixed">4</div></div>
     </div>
@@ -130,12 +130,16 @@ function renderCandidate(row,data){
   const av=row.querySelector('.avatar');
   const fallback=initials(data.nome||'');
   av.textContent=fallback;
-  if(data.foto){
+  const portrait=(data.sq&&data.uf)
+    ? 'https://divulgacandcontas.tse.jus.br/divulga/rest/arquivo/img/20322002026/'+encodeURIComponent(data.sq)+'/'+encodeURIComponent(data.uf)
+    : '';
+  if(portrait){
     const img=new Image();
     img.alt=data.nome||'Candidato';
+    img.referrerPolicy='no-referrer';
     img.onload=()=>{av.innerHTML='';av.appendChild(img)};
     img.onerror=()=>{av.textContent=fallback};
-    img.src=data.foto;
+    img.src=portrait;
   }
 }
 async function lookup(row){
