@@ -1,10 +1,11 @@
-name: Publicar colinha 2260 55240 222
+name: Publicar colinhas
 
 on:
   push:
     branches: ["main"]
     paths:
       - "colinha-2260-55240-222/**"
+      - "colinha-ana-paula-pages/**"
       - ".github/workflows/colinha-pages.yml"
   workflow_dispatch:
 
@@ -32,10 +33,19 @@ jobs:
         with:
           enablement: true
 
+      - name: Build combined Pages artifact
+        shell: bash
+        run: |
+          rm -rf .pages
+          mkdir -p .pages/ana-paula
+          cp -R colinha-2260-55240-222/. .pages/
+          cp -R colinha-ana-paula-pages/. .pages/ana-paula/
+          touch .pages/.nojekyll
+
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: colinha-2260-55240-222
+          path: .pages
 
       - name: Deploy
         id: deployment
