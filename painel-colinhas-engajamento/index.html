@@ -115,29 +115,61 @@ function render(){
   document.getElementById('tb').innerHTML=a.map(x=>'<tr><td><b>'+x.name+'</b></td><td class="muted">'+String(x.url||'')+'</td><td class="r">'+F(x.totals?.views)+'</td><td class="r">'+F(x.totals?.unique)+'</td><td class="r">'+F(x.totals?.shareMine)+'</td><td class="r">'+F(x.totals?.shareBlank)+'</td></tr>').join('');
 }
 
-document.getElementById('go').onclick=async()=>{
-  document.getElementById('le').textContent='';
+const elLogin=document.getElementById('login');
+const elApp=document.getElementById('app');
+const elGo=document.getElementById('go');
+const elErr=document.getElementById('le');
+const elLg=document.getElementById('lg');
+const elPw=document.getElementById('pw');
+const elOut=document.getElementById('out');
+const elFc=document.getElementById('fc');
+const elQ=document.getElementById('q');
+const elClear=document.getElementById('clear');
+
+async function doLogin(){
+  elErr.textContent='';
+  elGo.disabled=true;
+  elGo.textContent='Entrando...';
   try{
-    const d=await post('/api/login',{login:document.getElementById('lg').value,password:document.getElementById('pw').value});
+    const d=await post('/api/login',{login:elLg.value.trim(),password:elPw.value});
+    if(!d || !d.token) throw new Error('Sessão não recebida');
     token=d.token;
     localStorage.setItem('pc26_session',token);
     await load();
   }catch(e){
-    document.getElementById('le').textContent='Não foi possível entrar: '+e.message;
+    localStorage.removeItem('pc26_session');
+    token='';
+    elLogin.style.display='block';
+    elApp.style.display='none';
+    elErr.textContent='Não foi possível entrar: '+(e && e.message ? e.message : 'erro desconhecido');
+  }finally{
+    elGo.disabled=false;
+    elGo.textContent='Entrar';
   }
-};
+}
 
-document.getElementById('out').onclick=async()=>{
+elGo.addEventListener('click',doLogin);
+[elLg,elPw].forEach(el=>el.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()}));
+
+elOut.addEventListener('click',async()=>{
   try{await post('/api/auth/logout',{session:token})}catch{}
   localStorage.removeItem('pc26_session');
   location.reload();
-};
+});
 
-document.getElementById('fc').oninput=render;
-document.getElementById('q').oninput=render;
-document.getElementById('clear').onclick=()=>{document.getElementById('fc').value='';document.getElementById('q').value='';render()};
+elFc.addEventListener('input',render);
+elQ.addEventListener('input',render);
+elClear.addEventListener('click',()=>{elFc.value='';elQ.value='';render()});
 
-if(token) load().catch(()=>localStorage.removeItem('pc26_session'));
+if(token){
+  load().catch(e=>{
+    localStorage.removeItem('pc26_session');
+    token='';
+    elLogin.style.display='block';
+    elApp.style.display='none';
+    elErr.textContent='Sessão anterior não pôde ser carregada. Entre novamente.';
+  });
+}
 </script>
 </body>
 </html>
