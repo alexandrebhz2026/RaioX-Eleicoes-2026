@@ -1,0 +1,51 @@
+name: Sync official TSE photos for Ana Paula colinha
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "colinha-ana-paula-compact/sync_tse_photos.py"
+      - ".github/workflows/sync-colinha-tse-photos.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Pillow
+        run: python -m pip install --disable-pip-version-check pillow
+
+      - name: Download and optimize official TSE photos
+        run: python colinha-ana-paula-compact/sync_tse_photos.py
+
+      - name: Validate photo bundle
+        run: |
+          test -s colinha-ana-paula-compact/photos/130002535321.jpg
+          COUNT="$(find colinha-ana-paula-compact/photos -type f -name '*.jpg' | wc -l)"
+          echo "candidate photos: $COUNT"
+          test "$COUNT" -gt 100
+          du -sh colinha-ana-paula-compact/photos
+
+      - name: Commit generated photos
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add colinha-ana-paula-compact/photos
+          if git diff --cached --quiet; then
+            echo "No photo changes"
+            exit 0
+          fi
+          git commit -m "Cache official TSE candidate photos for colinha"
+          git push
