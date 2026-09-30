@@ -83,7 +83,7 @@ body{display:flex;justify-content:center}
 
     <div class="office ana" data-fixed="1" data-label="Deputada estadual">
       <div class="left">
-        <div class="avatar"><img src="/api/foto?sq=130002535321&uf=MG" alt="Ana Paula Siqueira"></div>
+        <div class="avatar"><img src="https://colinha-ana-paula-api.onrender.com/api/foto?sq=130002535321&uf=MG" alt="Ana Paula Siqueira" crossorigin="anonymous"></div>
         <div class="info"><p class="role">Deputada estadual</p><p class="primary">Ana Paula Siqueira</p></div>
       </div>
       <div class="digits"><div class="digit fixed">1</div><div class="digit fixed">3</div><div class="digit fixed">4</div><div class="digit fixed">4</div><div class="digit fixed">4</div></div>
@@ -191,9 +191,10 @@ function resetVisual(row){
   const av=row.querySelector('.avatar'); av.innerHTML=initials(row.dataset.label||'');
   rowState.delete(row);
 }
+const API_BASE='https://colinha-ana-paula-api.onrender.com';
 function photoProxyUrl(sq,uf){
   if(!sq||!uf) return '';
-  return '/api/foto?sq='+encodeURIComponent(String(sq))+'&uf='+encodeURIComponent(String(uf).toUpperCase());
+  return API_BASE+'/api/foto?sq='+encodeURIComponent(String(sq))+'&uf='+encodeURIComponent(String(uf).toUpperCase());
 }
 function renderCandidate(row,data){
   rowState.set(row,data);
@@ -224,7 +225,7 @@ async function lookup(row){
   info.querySelector('.primary').textContent='Buscando candidatura…';
   const s=info.querySelector('.secondary'); s.textContent='Consultando dados'; s.className='secondary';
   try{
-    const url='/api/candidato?cargo='+encodeURIComponent(row.dataset.cargo)+'&numero='+encodeURIComponent(numero);
+    const url=API_BASE+'/api/candidato?cargo='+encodeURIComponent(row.dataset.cargo)+'&numero='+encodeURIComponent(numero);
     const r=await fetch(url,{cache:'no-store'});
     const data=await r.json().catch(()=>({}));
     if(!r.ok||!data.ok){
