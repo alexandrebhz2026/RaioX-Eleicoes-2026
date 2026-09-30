@@ -1,0 +1,47 @@
+name: Deploy colinha Ana Paula to Vercel
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "colinha-ana-paula-compact/**"
+      - ".github/workflows/deploy-colinha-ana-paula-vercel.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: colinha-ana-paula-compact
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Verify Vercel token
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "VERCEL_TOKEN secret is not configured"
+            exit 2
+          fi
+
+      - name: Link existing Vercel project
+        run: |
+          mkdir -p .vercel
+          printf '%s\n' '{"orgId":"team_UQ8Nw0jzOAn2xjwA0kzOlvWF","projectId":"prj_6JqrUiEJlxHOiCk7yAQ3ZK3ATrWO"}' > .vercel/project.json
+
+      - name: Deploy production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx --yes vercel@latest deploy --prod --yes --token="$VERCEL_TOKEN" --scope="alexandre-3416s-projects"
