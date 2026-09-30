@@ -13,12 +13,53 @@ function json(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
+async function proxyPhoto(url, res) {
+  const sq = String(url.searchParams.get('sq') || '').replace(/\D/g, '');
+  const uf = String(url.searchParams.get('uf') || 'MG').toUpperCase().replace(/[^A-Z]/g, '');
+  if (!sq || sq.length > 30 || !/^[A-Z]{2}$/.test(uf)) {
+    return json(res, 400, { ok: false, error: 'Parametros invalidos' });
+  }
+
+  const sources = [
+    'https://meuvoto.org.br/og/' + encodeURIComponent(sq) + '.png?v=20260916',
+    'https://divulgacandcontas.tse.jus.br/divulga/rest/arquivo/img/20322002026/' + encodeURIComponent(sq) + '/' + encodeURIComponent(uf)
+  ];
+
+  for (const source of sources) {
+    try {
+      const response = await fetch(source, {
+        headers: {
+          accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+          'user-agent': 'Mozilla/5.0'
+        },
+        cache: 'no-store'
+      });
+      if (!response.ok) continue;
+      const body = Buffer.from(await response.arrayBuffer());
+      if (!body.length) continue;
+
+      res.statusCode = 200;
+      res.setHeader('content-type', response.headers.get('content-type') || 'image/png');
+      res.setHeader('cache-control', 'public, max-age=3600, stale-while-revalidate=86400');
+      res.setHeader('access-control-allow-origin', '*');
+      res.setHeader('x-content-type-options', 'nosniff');
+      return res.end(body);
+    } catch (_) {}
+  }
+
+  return json(res, 502, { ok: false, error: 'Foto indisponivel' });
+}
+
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://localhost');
 
     if (url.pathname === '/health') {
       return json(res, 200, { ok: true });
+    }
+
+    if (url.pathname === '/api/foto') {
+      return await proxyPhoto(url, res);
     }
 
     if (url.pathname === '/api/candidato') {
