@@ -340,7 +340,7 @@ async function makeCard(blank=false){
   rows.forEach((r,i)=>{
     if(i){ctx.strokeStyle='#ececef';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(110,y-20);ctx.lineTo(970,y-20);ctx.stroke();}
 
-    const hasPerson=Boolean(r.name);
+    const hasPerson=Boolean(r.name)&&!blank;
     const textX=hasPerson?225:120;
     if(hasPerson) drawCardPortrait(ctx,photos[i],r.name,120,y-18,82);
 
