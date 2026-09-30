@@ -81,6 +81,7 @@ const server = http.createServer(async (req, res) => {
       res.statusCode = response.status;
       res.setHeader('content-type', response.headers.get('content-type') || 'application/json; charset=utf-8');
       res.setHeader('cache-control', 'no-store, max-age=0');
+      res.setHeader('access-control-allow-origin', '*');
       return res.end(body);
     }
 
