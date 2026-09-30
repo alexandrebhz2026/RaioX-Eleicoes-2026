@@ -83,7 +83,7 @@ body{display:flex;justify-content:center}
 
     <div class="office ana" data-fixed="1" data-label="Deputada estadual">
       <div class="left">
-        <div class="avatar"><img src="https://divulgacandcontas.tse.jus.br/divulga/rest/arquivo/img/20322002026/130002535321/MG" alt="Ana Paula Siqueira"></div>
+        <div class="avatar"><img src="/api/foto?sq=130002535321&uf=MG" alt="Ana Paula Siqueira"></div>
         <div class="info"><p class="role">Deputada estadual</p><p class="primary">Ana Paula Siqueira</p></div>
       </div>
       <div class="digits"><div class="digit fixed">1</div><div class="digit fixed">3</div><div class="digit fixed">4</div><div class="digit fixed">4</div><div class="digit fixed">4</div></div>
@@ -191,6 +191,10 @@ function resetVisual(row){
   const av=row.querySelector('.avatar'); av.innerHTML=initials(row.dataset.label||'');
   rowState.delete(row);
 }
+function photoProxyUrl(sq,uf){
+  if(!sq||!uf) return '';
+  return '/api/foto?sq='+encodeURIComponent(String(sq))+'&uf='+encodeURIComponent(String(uf).toUpperCase());
+}
 function renderCandidate(row,data){
   rowState.set(row,data);
   const info=row.querySelector('.info');
@@ -201,9 +205,7 @@ function renderCandidate(row,data){
   const av=row.querySelector('.avatar');
   const fallback=initials(data.nome||'');
   av.textContent=fallback;
-  const portrait=(data.sq&&data.uf)
-    ? 'https://divulgacandcontas.tse.jus.br/divulga/rest/arquivo/img/20322002026/'+encodeURIComponent(data.sq)+'/'+encodeURIComponent(data.uf)
-    : '';
+  const portrait=(data.sq&&data.uf) ? photoProxyUrl(data.sq,data.uf) : '';
   if(portrait){
     const img=new Image();
     img.alt=data.nome||'Candidato';
@@ -266,7 +268,14 @@ dynamicRows.forEach(row=>{
 });
 
 function rowsForImage(blank){
-  const out=[{label:'Deputado federal',number:'',name:''},{label:'Deputada estadual',number:'13444',name:'Ana Paula Siqueira'},{label:'Senador · 1º voto',number:'',name:''},{label:'Senador · 2º voto',number:'',name:''},{label:'Governador',number:'',name:''},{label:'Presidente',number:'',name:''}];
+  const out=[
+    {label:'Deputado federal',number:'',name:'',photo:''},
+    {label:'Deputada estadual',number:'13444',name:'Ana Paula Siqueira',photo:photoProxyUrl('130002535321','MG')},
+    {label:'Senador · 1º voto',number:'',name:'',photo:''},
+    {label:'Senador · 2º voto',number:'',name:'',photo:''},
+    {label:'Governador',number:'',name:'',photo:''},
+    {label:'Presidente',number:'',name:'',photo:''}
+  ];
   if(blank) return out;
   dynamicRows.forEach((row,idx)=>{
     const mapIndex=[0,2,3,4,5][idx];
@@ -274,11 +283,45 @@ function rowsForImage(blank){
     const data=rowState.get(row);
     out[mapIndex].number=number;
     out[mapIndex].name=data?.nome||'';
+    out[mapIndex].photo=(data?.sq&&data?.uf)?photoProxyUrl(data.sq,data.uf):'';
   });
   return out;
 }
 function rounded(ctx,x,y,w,h,r){
   ctx.beginPath(); ctx.roundRect(x,y,w,h,r); ctx.closePath();
+}
+function loadCardImage(src){
+  return new Promise(resolve=>{
+    if(!src){ resolve(null); return; }
+    const img=new Image();
+    img.crossOrigin='anonymous';
+    img.referrerPolicy='no-referrer';
+    img.onload=()=>resolve(img);
+    img.onerror=()=>resolve(null);
+    img.src=src;
+  });
+}
+function cardInitials(name=''){
+  return (name.trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('')||'?').toUpperCase();
+}
+function drawCardPortrait(ctx,img,name,x,y,size){
+  rounded(ctx,x,y,size,size,18);
+  if(img){
+    ctx.save();
+    ctx.clip();
+    const sw=img.naturalWidth||img.width||size, sh=img.naturalHeight||img.height||size;
+    const scale=Math.max(size/sw,size/sh);
+    const dw=sw*scale, dh=sh*scale;
+    ctx.drawImage(img,x+(size-dw)/2,y+(size-dh)/2,dw,dh);
+    ctx.restore();
+    rounded(ctx,x,y,size,size,18);
+    ctx.strokeStyle='#e7e7eb'; ctx.lineWidth=2; ctx.stroke();
+    return;
+  }
+  ctx.fillStyle='#eef0f3'; ctx.fill();
+  ctx.fillStyle='#7c7c82'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.font='800 24px Arial'; ctx.fillText(cardInitials(name),x+size/2,y+size/2+1);
+  ctx.textBaseline='alphabetic';
 }
 async function makeCard(blank=false){
   const canvas=document.createElement('canvas'); canvas.width=1080; canvas.height=1350;
@@ -288,16 +331,26 @@ async function makeCard(blank=false){
   ctx.font='400 30px Arial'; ctx.fillText('Eleições 2026 · MG',540,155);
   rounded(ctx,70,205,940,1015,44); ctx.fillStyle='#fff'; ctx.fill();
   ctx.strokeStyle='#ffdc18'; ctx.lineWidth=10; ctx.stroke();
+
   const rows=rowsForImage(blank);
+  const photos=await Promise.all(rows.map(r=>loadCardImage(r.photo)));
+
   let y=270;
   rows.forEach((r,i)=>{
     if(i){ctx.strokeStyle='#ececef';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(110,y-20);ctx.lineTo(970,y-20);ctx.stroke();}
-    ctx.textAlign='left'; ctx.fillStyle='#777'; ctx.font='700 27px Arial'; ctx.fillText(r.label,120,y);
-    ctx.fillStyle='#171717'; ctx.font='800 35px Arial'; ctx.fillText(r.name||'____________________',120,y+46);
+
+    const hasPerson=Boolean(r.name);
+    const textX=hasPerson?225:120;
+    if(hasPerson) drawCardPortrait(ctx,photos[i],r.name,120,y-18,82);
+
+    ctx.textAlign='left'; ctx.fillStyle='#777'; ctx.font='700 27px Arial'; ctx.fillText(r.label,textX,y);
+    ctx.fillStyle='#171717'; ctx.font='800 35px Arial'; ctx.fillText(r.name||'____________________',textX,y+46);
+
     ctx.textAlign='right'; ctx.fillStyle=i===1?'#c81420':'#222'; ctx.font='900 50px Arial';
     ctx.fillText(r.number||'—',940,y+37);
     y+=145;
   });
+
   ctx.textAlign='center'; ctx.fillStyle='#8a8a8f'; ctx.font='400 24px Arial'; ctx.fillText('Confira os números antes de votar.',540,1168);
   return new Promise(resolve=>canvas.toBlob(resolve,'image/png',0.96));
 }
