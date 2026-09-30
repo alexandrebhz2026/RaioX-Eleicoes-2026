@@ -83,7 +83,7 @@ body{display:flex;justify-content:center}
 
     <div class="office ana" data-fixed="1" data-label="Deputada estadual">
       <div class="left">
-        <div class="avatar"><img src="/api/foto?sq=130002535321&uf=MG" alt="Ana Paula Siqueira"></div>
+        <div class="avatar"><img src="https://divulgacandcontas.tse.jus.br/divulga/rest/arquivo/img/20322002026/130002535321/MG" alt="Ana Paula Siqueira" referrerpolicy="no-referrer"></div>
         <div class="info"><p class="role">Deputada estadual</p><p class="primary">Ana Paula Siqueira</p></div>
       </div>
       <div class="digits"><div class="digit fixed">1</div><div class="digit fixed">3</div><div class="digit fixed">4</div><div class="digit fixed">4</div><div class="digit fixed">4</div></div>
@@ -191,9 +191,9 @@ function resetVisual(row){
   const av=row.querySelector('.avatar'); av.innerHTML=initials(row.dataset.label||'');
   rowState.delete(row);
 }
-function photoProxyUrl(sq,uf){
+function tsePhotoUrl(sq,uf){
   if(!sq||!uf) return '';
-  return '/api/foto?sq='+encodeURIComponent(String(sq))+'&uf='+encodeURIComponent(String(uf).toUpperCase());
+  return 'https://divulgacandcontas.tse.jus.br/divulga/rest/arquivo/img/20322002026/'+encodeURIComponent(String(sq))+'/'+encodeURIComponent(String(uf).toUpperCase());
 }
 function renderCandidate(row,data){
   rowState.set(row,data);
@@ -205,7 +205,7 @@ function renderCandidate(row,data){
   const av=row.querySelector('.avatar');
   const fallback=initials(data.nome||'');
   av.textContent=fallback;
-  const portrait=(data.sq&&data.uf) ? photoProxyUrl(data.sq,data.uf) : '';
+  const portrait=(data.sq&&data.uf) ? tsePhotoUrl(data.sq,data.uf) : '';
   if(portrait){
     const img=new Image();
     img.alt=data.nome||'Candidato';
@@ -270,7 +270,7 @@ dynamicRows.forEach(row=>{
 function rowsForImage(blank){
   const out=[
     {label:'Deputado federal',number:'',name:'',photo:''},
-    {label:'Deputada estadual',number:'13444',name:'Ana Paula Siqueira',photo:photoProxyUrl('130002535321','MG')},
+    {label:'Deputada estadual',number:'13444',name:'Ana Paula Siqueira',photo:tsePhotoUrl('130002535321','MG')},
     {label:'Senador · 1º voto',number:'',name:'',photo:''},
     {label:'Senador · 2º voto',number:'',name:'',photo:''},
     {label:'Governador',number:'',name:'',photo:''},
@@ -283,7 +283,7 @@ function rowsForImage(blank){
     const data=rowState.get(row);
     out[mapIndex].number=number;
     out[mapIndex].name=data?.nome||'';
-    out[mapIndex].photo=(data?.sq&&data?.uf)?photoProxyUrl(data.sq,data.uf):'';
+    out[mapIndex].photo=(data?.sq&&data?.uf)?tsePhotoUrl(data.sq,data.uf):'';
   });
   return out;
 }
@@ -294,6 +294,8 @@ function loadCardImage(src){
   return new Promise(resolve=>{
     if(!src){ resolve(null); return; }
     const img=new Image();
+    img.crossOrigin='anonymous';
+    img.referrerPolicy='no-referrer';
     img.onload=()=>resolve(img);
     img.onerror=()=>resolve(null);
     img.src=src;
