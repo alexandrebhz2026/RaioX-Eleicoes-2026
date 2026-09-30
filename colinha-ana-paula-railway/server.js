@@ -21,7 +21,6 @@ async function proxyPhoto(url, res) {
   }
 
   const sources = [
-    'https://meuvoto.org.br/og/' + encodeURIComponent(sq) + '.png?v=20260916',
     'https://divulgacandcontas.tse.jus.br/divulga/rest/arquivo/img/20322002026/' + encodeURIComponent(sq) + '/' + encodeURIComponent(uf)
   ];
 
