@@ -1,0 +1,70 @@
+name: Package RAIO-X v0.3.24 Complete Project
+
+on:
+  push:
+    branches: [v0.3.20-redesign]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact v0.3.24 source
+        uses: actions/checkout@v4
+        with:
+          ref: 27e7074fe59507388e95d42e8e205e746522de8c
+          path: raiox-project
+          fetch-depth: 1
+
+      - name: Download v0.3.24 final APK
+        uses: actions/download-artifact@v4
+        with:
+          name: RAIO-X-Eleicoes-2026-v0.3.24-FINAL-APK
+          path: raiox-project/dist
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: 32797534105
+
+      - name: Add delivery manifest
+        run: |
+          rm -rf raiox-project/.git
+          cat > raiox-project/ENTREGA-v0.3.24.txt <<'EOF'
+          RAIO-X ELEICOES 2026 - PROJETO COMPLETO
+          Versao: v0.3.24 FINAL
+          Branch de origem: v0.3.20-redesign
+          Commit exato do codigo: 27e7074fe59507388e95d42e8e205e746522de8c
+
+          Inclui:
+          - codigo-fonte completo desta versao
+          - app Android/iOS cross-platform
+          - assets versionados
+          - scripts de snapshot e fotos oficiais do TSE
+          - configuracoes Firebase/Firestore versionadas
+          - backend do Xis para Vercel
+          - workflows de build
+          - APK final v0.3.24 em dist/
+
+          Nao inclui node_modules nem diretorios temporarios de build, pois sao dependencias/artefatos recriados automaticamente.
+          EOF
+
+      - name: Create project ZIP
+        run: |
+          zip -qr RAIO-X-Eleicoes-2026-v0.3.24-PROJETO-COMPLETO.zip raiox-project
+          test -s RAIO-X-Eleicoes-2026-v0.3.24-PROJETO-COMPLETO.zip
+          unzip -l RAIO-X-Eleicoes-2026-v0.3.24-PROJETO-COMPLETO.zip | grep -q 'raiox-project/app/AppV020.js'
+          unzip -l RAIO-X-Eleicoes-2026-v0.3.24-PROJETO-COMPLETO.zip | grep -q 'raiox-project/xis-backend/api/xis.js'
+          unzip -l RAIO-X-Eleicoes-2026-v0.3.24-PROJETO-COMPLETO.zip | grep -q 'raiox-project/dist/RAIO-X-Eleicoes-2026-v0.3.24-FINAL.apk'
+          sha256sum RAIO-X-Eleicoes-2026-v0.3.24-PROJETO-COMPLETO.zip
+          ls -lh RAIO-X-Eleicoes-2026-v0.3.24-PROJETO-COMPLETO.zip
+
+      - name: Upload complete project ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: RAIO-X-Eleicoes-2026-v0.3.24-PROJETO-COMPLETO
+          path: RAIO-X-Eleicoes-2026-v0.3.24-PROJETO-COMPLETO.zip
+          if-no-files-found: error
+          retention-days: 14

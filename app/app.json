@@ -2,13 +2,13 @@
   "expo": {
     "name": "RAIO-X Eleições 2026",
     "slug": "raio-x-eleicoes-2026",
-    "version": "0.3.19",
+    "version": "0.3.24",
     "scheme": "raiox2026",
     "orientation": "portrait",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "backgroundColor": "#061329",
     "icon": "./assets/raiox-icon.png",
-    "extra": {"xisUi": "official-v019", "xisAiPolicy": "local-tse-cache-ai"},
+    "extra": {"xisUi": "detective-clean-v023", "xisAiPolicy": "local-tse-cache-ai", "appearance": "light-dark-automatic", "layoutSafety": "safe-area-v023", "biometricVisual": "xis-owner-v023", "accessMethod": "dynamic-biometric-faceid-v023", "xisIntro": "first-login-per-user-v023", "candidateBatch": 15, "candidatePhotos": "mg-deputies-official-v023", "metricLayout": "wide-patrimonio-v024", "release": "final-v024"},
     "plugins": [
       "@react-native-google-signin/google-signin",
       ["expo-local-authentication", {"faceIDPermission": "Use o Face ID para entrar com segurança no RAIO-X Eleições 2026."}],
@@ -17,7 +17,7 @@
     "ios": {"supportsTablet": true, "bundleIdentifier": "com.raiox2026.app"},
     "android": {
       "package": "com.raiox2026.app",
-      "versionCode": 23,
+      "versionCode": 28,
       "googleServicesFile": "./google-services.json",
       "predictiveBackGestureEnabled": false,
       "adaptiveIcon": {"foregroundImage": "./assets/raiox-icon.png", "backgroundColor": "#061329"}
