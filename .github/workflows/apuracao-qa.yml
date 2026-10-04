@@ -33,6 +33,16 @@ jobs:
           grep -q "A conta" apuracao-2026/app.bundle.js
           grep -q "Congresso" apuracao-2026/index.html
 
+      - name: Headless browser runtime
+        run: |
+          set -e
+          base="https://apuracao-2026-lake.vercel.app"
+          browser="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser)"
+          test -n "$browser"
+          "$browser" --headless --no-sandbox --disable-gpu --virtual-time-budget=12000 --dump-dom "$base/?qa=$GITHUB_SHA" > /tmp/apuracao-dom.html
+          grep -q "Apuração em tempo real" /tmp/apuracao-dom.html
+          grep -q "Governadores por UF" /tmp/apuracao-dom.html
+
       - name: Live deployment smoke tests
         run: |
           set -e
