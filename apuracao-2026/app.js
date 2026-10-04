@@ -673,6 +673,7 @@ function renderSenateGrid(sen){
 }
 
 const FAVORITES_KEY='ap26-favorites-v1';
+const FAVORITE_HISTORY_KEY='ap26-favorite-history-v1';
 function favoriteKey(c){
   return [c.sqcand||c.id||c.numero||'',c.cargoCodigo||c.cargo||'',c.uf||''].join('|');
 }
@@ -751,13 +752,21 @@ function favoriteCargoCode(c){
 }
 function favoritePageCard(c){
   registerCandidate(c);
-  const status=c.status||c.st||c.situacaoOficial||'';
-  return `<div class="favorite-page-card">
+  const status=c.liveStatus||c.status||c.st||c.situacaoOficial||'';
+  const delta=Number(c.deltaVotes||0),move=Number(c.rankChange||0),rank=Number(c.rank||0);
+  const statusCls=/ELEITO TSE|2º TURNO TSE/i.test(status)?'official-badge':/PROJETADO ELEITO/i.test(status)?'projection-badge':/Liderando/i.test(status)?'leader-badge':/Não eleito|Suplente|Fora/i.test(status)?'supp-badge':'';
+  return `<div class="favorite-page-card favorite-live-card">
     ${avatar(c)}
     <div class="favorite-main"><div class="result-context">${esc(c.cargo||CARGO[favoriteCargoCode(c)]||'Candidato')} · ${esc(c.uf||'')}</div>
       <div class="cand-name">${esc(c.nome)}</div>
       <div class="cand-meta">${esc(c.numero)} · ${esc(c.partido)} · ${fmt(c.votos)} votos</div>
-      ${status?`<span class="${/Não eleito|Suplente/i.test(status)?'supp-badge':'official-badge'}">${esc(status)} · TSE</span>`:''}
+      ${status?`<span class="${statusCls}">${esc(status)}</span>`:''}
+      <div class="favorite-live-meta">
+        <span><b>${rank?'#'+rank:'—'}</b> posição</span>
+        <span class="${delta>0?'up':''}"><b>${delta>0?'+'+fmt(delta):'—'}</b> votos desde a última</span>
+        <span class="${move>0?'up':move<0?'down':''}"><b>${move>0?'↑ '+move:move<0?'↓ '+Math.abs(move):'→'}</b> posição</span>
+        <span><b>${pct(c.apuracaoPct||0)}</b> apurado</span>
+      </div>
     </div>
     <div class="favorite-side">${favoriteButton(c)}<strong>${pct(c.percentual??c.pct)}</strong></div>
   </div>`;
@@ -785,6 +794,8 @@ function renderFavoritesPage(){
 }
 async function refreshFavorites(force=false){
   const favs=getFavorites();if(!favs.length){renderFavoritesPage();return}
+  const history=readJsonLocal(FAVORITE_HISTORY_KEY,{});
+  const nextHistory={...history};
   const groups=new Map();
   for(const f of favs){
     const cargo=favoriteCargoCode(f);if(!cargo)continue;
@@ -798,19 +809,34 @@ async function refreshFavorites(force=false){
     const docs=await Promise.all(batch.map(async g=>{try{return{g,r:await fetchResult(g.cargo,g.uf,force)}}catch{return{g,r:null}}}));
     for(const {g,r} of docs){
       if(!r)continue;
+      const deputy=['6','7','8'].includes(String(g.cargo));
+      const calc=deputy?calcularProporcional(r):null;
+      const projectedIds=new Set((calc?.eleitos||[]).map(e=>String(e.candidato?.id||'')));
       for(const old of g.items){
         const id=String(old.sqcand||old.id||''),num=String(old.numero||'');
-        const c=r.candidatos.find(x=>String(x.id||x.sqcand||'')===id)||(num?r.candidatos.find(x=>String(x.numero||'')===num):null);
+        const rankIndex=r.candidatos.findIndex(x=>String(x.id||x.sqcand||'')===id||(num&&String(x.numero||'')===num));
+        const c=rankIndex>=0?r.candidatos[rankIndex]:null;
         if(c){
-          const fresh=candidateForFavorite(c,r,g.cargo);
+          const base=candidateForFavorite(c,r,g.cargo),key=favoriteKey(base),prev=history[key]||history[favoriteKey(old)]||{};
+          const oi=officialInfo(c,r,g.cargo,rankIndex);
+          const officialElected=!!oi?.official&&/eleit/i.test(String(oi.label||''))&&!/não|nao|suplente|2.? ?turno/i.test(String(oi.label||''));
+          const projected=deputy&&projectedIds.has(String(c.id||''))&&!officialElected;
+          let liveStatus='';
+          if(officialElected)liveStatus='ELEITO TSE';
+          else if(oi?.official&&/2.? ?turno/i.test(String(oi.label||'')))liveStatus='2º TURNO TSE';
+          else if(projected)liveStatus='PROJETADO ELEITO · cálculo atual';
+          else if(oi?.label)liveStatus=oi.label.replace(/ · TSE$/,'');
+          else if(deputy)liveStatus='Fora das vagas projetadas';
+          const fresh={...base,rank:rankIndex+1,deltaVotes:prev.votes===undefined?0:Number(c.votos||0)-Number(prev.votes||0),rankChange:prev.rank?Number(prev.rank)-(rankIndex+1):0,apuracaoPct:r.pctTotalizado,liveStatus,projected};
           const oldKey=favoriteKey(old);
-          updated.delete(oldKey);
-          updated.set(favoriteKey(fresh),fresh);
+          updated.delete(oldKey);updated.set(key,fresh);
+          nextHistory[key]={votes:Number(c.votos||0),rank:rankIndex+1,at:Date.now()};
         }
       }
     }
   }
   saveFavorites([...updated.values()]);
+  localStorage.setItem(FAVORITE_HISTORY_KEY,JSON.stringify(nextHistory));
   renderFavoritesPage();
   syncFavoriteButtons();
 }
