@@ -8,7 +8,7 @@ const CARGO={'1':'Presidente','3':'Governador','5':'Senador','6':'Deputado Feder
 const COLORS=['#7c3aed','#2563eb','#0891b2','#0f9f6e','#d97706','#db2777','#4f46e5','#65a30d','#ea580c','#9333ea','#0284c7','#059669','#ca8a04','#be123c','#6366f1','#15803d','#c2410c','#a21caf'];
 const S={
   codes:{fed:'6257',est:'6259'},view:'agora',uf:'MG',cargo:'3',cache:new Map(),governors:null,
-  congress:{camara:null,senado:null},poll:null,loading:new Set(),lastRefresh:null
+  congress:{camara:null,senado:null},poll:null,loading:new Set(),lastRefresh:null,candidateIndex:new Map()
 };
 
 const $=s=>document.querySelector(s);
@@ -261,20 +261,136 @@ async function loadCongress(force=false){
 function renderSenateGrid(sen){
   return (sen.ufs||[]).map(u=>{const list=u.official?.length?u.official:u.leaders||[];return `<div class="senate-uf"><strong>${u.uf} · ${pct(u.pct||0)}</strong>${list.slice(0,2).map(c=>`<div class="senate-name ${c.official?'official':''}">${c.official?'✓ ':''}${esc(c.nome)} · ${esc(c.partido)}</div>`).join('')||'<div class="senate-name">aguardando</div>'}</div>`}).join('');
 }
+
+const FAVORITES_KEY='ap26-favorites-v1';
+function favoriteKey(c){
+  return [c.sqcand||c.id||c.numero||'',c.cargoCodigo||c.cargo||'',c.uf||''].join('|');
+}
+function getFavorites(){
+  try{
+    const list=JSON.parse(localStorage.getItem(FAVORITES_KEY)||'[]');
+    return Array.isArray(list)?list:[];
+  }catch{return[]}
+}
+function saveFavorites(list){
+  localStorage.setItem(FAVORITES_KEY,JSON.stringify(list.slice(0,100)));
+}
+function registerCandidate(c){
+  const key=favoriteKey(c);
+  if(key)S.candidateIndex.set(key,c);
+  return key;
+}
+function isFavorite(c){
+  const key=favoriteKey(c);
+  return getFavorites().some(x=>favoriteKey(x)===key);
+}
+function favoriteButton(c){
+  const key=registerCandidate(c),on=isFavorite(c);
+  return `<button class="favorite-btn ${on?'active':''}" data-favorite-key="${encodeURIComponent(key)}" aria-label="${on?'Remover dos favoritos':'Adicionar aos favoritos'}" title="${on?'Remover dos favoritos':'Favoritar'}">${on?'★':'☆'}</button>`;
+}
+function updateFavoriteSnapshots(results){
+  const fresh=new Map((results||[]).map(c=>[favoriteKey(c),c]));
+  const favs=getFavorites();let changed=false;
+  const next=favs.map(old=>{const n=fresh.get(favoriteKey(old));if(n){changed=true;return n}return old});
+  if(changed)saveFavorites(next);
+}
+function searchResultCard(c,{favoriteContext=false}={}){
+  const status=c.status||c.st||'';
+  return `<div class="search-result ${favoriteContext?'favorite-card':''}" data-candidate-key="${esc(favoriteKey(c))}">
+    ${avatar(c)}
+    <div><div class="result-context">${esc(c.cargo)} · ${esc(c.uf)}</div><div class="cand-name">${esc(c.nome)}</div>
+      <div class="cand-meta">${esc(c.numero)} · ${esc(c.partido)} · ${fmt(c.votos)} votos</div>
+      ${status?`<span class="${/Não eleito|Suplente/i.test(status)?'supp-badge':'official-badge'}">${esc(status)} · TSE</span>`:''}
+    </div>
+    <div class="result-actions">${favoriteButton(c)}<div class="right-stat"><strong>${pct(c.percentual??c.pct)}</strong></div></div>
+  </div>`;
+}
+function renderFavorites(){
+  const section=$('#favoritesSection'),list=$('#favoriteList'),count=$('#favoriteCount');
+  if(!section||!list)return;
+  const favs=getFavorites();
+  favs.forEach(registerCandidate);
+  section.classList.toggle('hidden',favs.length===0);
+  if(count)count.textContent=String(favs.length);
+  list.innerHTML=favs.map(c=>searchResultCard(c,{favoriteContext:true})).join('');
+  wireFavorites(list);
+}
+function syncFavoriteButtons(){
+  $('[data-favorite-key]').forEach(btn=>{
+    let key='';try{key=decodeURIComponent(btn.dataset.favoriteKey||'')}catch{key=btn.dataset.favoriteKey||''}
+    const on=getFavorites().some(x=>favoriteKey(x)===key);
+    btn.classList.toggle('active',on);
+    btn.textContent=on?'★':'☆';
+    btn.setAttribute('aria-label',on?'Remover dos favoritos':'Adicionar aos favoritos');
+    btn.title=on?'Remover dos favoritos':'Favoritar';
+  });
+}
+function toggleFavorite(key){
+  const favs=getFavorites(),idx=favs.findIndex(x=>favoriteKey(x)===key);
+  if(idx>=0)favs.splice(idx,1);
+  else{
+    const c=S.candidateIndex.get(key);
+    if(!c)return;
+    favs.unshift(c);
+  }
+  saveFavorites(favs);
+  if(navigator.vibrate)navigator.vibrate(25);
+  renderFavorites();
+  syncFavoriteButtons();
+}
+function wireFavorites(root=document){
+  root.querySelectorAll('[data-favorite-key]').forEach(btn=>{
+    btn.onclick=e=>{
+      e.preventDefault();e.stopPropagation();
+      let key='';try{key=decodeURIComponent(btn.dataset.favoriteKey||'')}catch{key=btn.dataset.favoriteKey||''}
+      toggleFavorite(key);
+    };
+  });
+}
+
 function searchUI(){
   const ufOpts='<option value="">Brasil inteiro</option>'+UFS.map(([u,n])=>`<option value="${u.toLowerCase()}" ${u==='MG'?'selected':''}>${n} (${u})</option>`).join('');
-  return `<div class="page-head"><div><div class="eyebrow">Base oficial 2026</div><h1 class="page-title">Buscar candidato</h1><div class="page-sub">Busca global por nome, número ou partido — não depende das telas que você abriu.</div></div></div>
-  <div class="card search-card"><div class="search-controls"><input id="searchInput" class="search-input" placeholder="Ex.: Ana Paula Siqueira, 13444, PT" autocomplete="off"><select id="searchUF" class="search-select">${ufOpts}</select><select id="searchCargo" class="search-select"><option value="">Todos os cargos</option><option value="1">Presidente</option><option value="3">Governador</option><option value="5">Senador</option><option value="6">Dep. Federal</option><option value="7">Dep. Estadual</option><option value="8">Dep. Distrital</option></select><button id="searchBtn" class="primary-btn">Buscar</button></div><div class="search-meta" id="searchMeta">UF padrão: Minas Gerais. Escolha “Brasil inteiro” para varrer todas as UFs.</div><div id="searchResults" class="search-results"></div></div>`;
+  return `<div class="page-head"><div><div class="eyebrow">Base oficial 2026</div><h1 class="page-title">Buscar candidato</h1><div class="page-sub">Busque e toque na estrela para acompanhar seus candidatos favoritos.</div></div></div>
+  <div class="card search-card">
+    <div class="search-controls"><input id="searchInput" class="search-input" placeholder="Ex.: Ana Paula Siqueira, 13444, PT" autocomplete="off"><select id="searchUF" class="search-select">${ufOpts}</select><select id="searchCargo" class="search-select"><option value="">Todos os cargos</option><option value="1">Presidente</option><option value="3">Governador</option><option value="5">Senador</option><option value="6">Dep. Federal</option><option value="7">Dep. Estadual</option><option value="8">Dep. Distrital</option></select><button id="searchBtn" class="primary-btn">Buscar</button></div>
+    <div class="search-meta" id="searchMeta">UF padrão: Minas Gerais. Escolha “Brasil inteiro” para varrer todas as UFs.</div>
+    <section id="favoritesSection" class="favorites-section hidden"><div class="favorites-head"><div><span class="eyebrow">Acompanhamento rápido</span><strong>Meus favoritos <span id="favoriteCount" class="favorite-count">0</span></strong></div><span class="section-note">salvos neste aparelho</span></div><div id="favoriteList" class="search-results favorite-list"></div></section>
+    <div id="searchResults" class="search-results"></div>
+  </div>`;
 }
 function initSearch(){
-  const host=$('#searchContent');if(!host.dataset.ready){host.innerHTML=searchUI();host.dataset.ready='1'}
-  const btn=$('#searchBtn'),input=$('#searchInput');btn.onclick=doSearch;input.onkeydown=e=>{if(e.key==='Enter')doSearch()};
+  const host=$('#searchContent');
+  if(!host.dataset.ready){host.innerHTML=searchUI();host.dataset.ready='1'}
+  const btn=$('#searchBtn'),input=$('#searchInput');
+  btn.onclick=doSearch;
+  input.onkeydown=e=>{if(e.key==='Enter')doSearch()};
+  renderFavorites();
 }
 async function doSearch(){
-  const q=$('#searchInput').value.trim(),uf=$('#searchUF').value,cargo=$('#searchCargo').value;if(q.length<3){$('#searchMeta').textContent='Digite pelo menos 3 caracteres.';return}
-  const btn=$('#searchBtn');btn.disabled=true;btn.textContent='Buscando…';$('#searchResults').innerHTML='<div class="card compact-pad loading"><div class="empty">Consultando arquivos oficiais do TSE…</div></div>';
-  try{const r=await fetch('/api/search?q='+encodeURIComponent(q)+(uf?'&uf='+encodeURIComponent(uf):'')+(cargo?'&cargo='+encodeURIComponent(cargo):''),{cache:'no-store'});const j=await r.json();$('#searchMeta').textContent=`${j.count||0} resultado(s) · ${j.scanned||0} arquivo(s) oficiais consultados`;$('#searchResults').innerHTML=(j.results||[]).map(c=>`<div class="search-result">${avatar(c)}<div><div class="result-context">${esc(c.cargo)} · ${esc(c.uf)}</div><div class="cand-name">${esc(c.nome)}</div><div class="cand-meta">${esc(c.numero)} · ${esc(c.partido)} · ${fmt(c.votos)} votos</div>${c.st?`<span class="${/Não eleito|Suplente/i.test(c.st)?'supp-badge':'official-badge'}">${esc(c.st)} · TSE</span>`:''}</div><div class="right-stat"><strong>${pct(c.percentual)}</strong></div></div>`).join('')||'<div class="empty">Nenhum candidato encontrado nos arquivos consultados.</div>'}catch(e){$('#searchMeta').textContent='Falha temporária ao consultar o TSE.';$('#searchResults').innerHTML='<div class="empty">Tente novamente em alguns segundos.</div>'}finally{btn.disabled=false;btn.textContent='Buscar'}
+  const q=$('#searchInput').value.trim(),uf=$('#searchUF').value,cargo=$('#searchCargo').value;
+  if(q.length<3){$('#searchMeta').textContent='Digite pelo menos 3 caracteres.';return}
+  const btn=$('#searchBtn');
+  btn.disabled=true;btn.textContent='Buscando…';
+  $('#searchResults').innerHTML='<div class="card compact-pad loading"><div class="empty">Consultando arquivos oficiais do TSE…</div></div>';
+  try{
+    const r=await fetch('/api/search?q='+encodeURIComponent(q)+(uf?'&uf='+encodeURIComponent(uf):'')+(cargo?'&cargo='+encodeURIComponent(cargo):''),{cache:'no-store'});
+    const j=await r.json();
+    const results=j.results||[];
+    results.forEach(registerCandidate);
+    updateFavoriteSnapshots(results);
+    $('#searchMeta').textContent=`${j.count||0} resultado(s) · ${j.scanned||0} arquivo(s) oficiais consultados`;
+    $('#searchResults').innerHTML=results.map(c=>searchResultCard(c)).join('')||'<div class="empty">Nenhum candidato encontrado nos arquivos consultados.</div>';
+    wireFavorites($('#searchResults'));
+    renderFavorites();
+    syncFavoriteButtons();
+  }catch(e){
+    $('#searchMeta').textContent='Falha temporária ao consultar o TSE.';
+    $('#searchResults').innerHTML='<div class="empty">Tente novamente em alguns segundos.</div>';
+  }finally{
+    btn.disabled=false;btn.textContent='Buscar';
+  }
 }
+
 function loadHow(){
   const host=$('#howContent');host.innerHTML=`<div class="page-head"><div><div class="eyebrow">Transparência</div><h1 class="page-title">Como funciona</h1><div class="page-sub">O app separa dado oficial de cálculo próprio.</div></div></div><div class="info-grid">
   <div class="card info-card"><h3>ELEITO / 2º TURNO · TSE</h3><p>Para Presidente e Governador, o campo <strong>md</strong> do arquivo oficial indica quando a eleição fica matematicamente definida antes do fim: <strong>e</strong> = eleito e <strong>s</strong> = segundo turno. O candidato correspondente vem com <strong>e=s</strong>.</p></div>
