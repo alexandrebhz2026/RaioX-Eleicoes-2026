@@ -266,3 +266,45 @@ body{overflow-x:hidden}
   .governor-map-legend small{grid-column:3;margin-top:0}
   .governor-map-wrap{padding-left:0;padding-right:0}
 }
+
+/* Deputy projection colors v5.0 */
+.candidate-row.candidate-official-elected{
+  background:color-mix(in srgb,var(--success) 18%,var(--surface));
+  border-color:color-mix(in srgb,var(--success) 55%,var(--border));
+  box-shadow:inset 4px 0 0 var(--success);
+}
+.candidate-row.candidate-projected-elected{
+  background:color-mix(in srgb,var(--success) 8%,var(--surface));
+  border-color:color-mix(in srgb,var(--success) 28%,var(--border));
+  box-shadow:inset 4px 0 0 color-mix(in srgb,var(--success) 58%,white);
+}
+.candidate-row.candidate-official-elected .cand-name{color:var(--success)}
+.projection-badge{
+  display:inline-flex;align-items:center;width:max-content;max-width:100%;
+  margin-top:5px;padding:4px 7px;border-radius:999px;
+  background:color-mix(in srgb,var(--success) 13%,var(--surface));
+  color:color-mix(in srgb,var(--success) 86%,var(--text));
+  border:1px solid color-mix(in srgb,var(--success) 30%,var(--border));
+  font-size:9px;font-weight:950;text-transform:uppercase;letter-spacing:.025em;
+}
+.projection-legend{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;
+  margin:0 0 10px;
+}
+.projection-legend-item{
+  display:grid;grid-template-columns:11px minmax(0,1fr);gap:2px 7px;align-items:center;
+  border:1px solid var(--border);border-radius:12px;padding:9px 10px;background:var(--surface2);
+}
+.projection-legend-item i{
+  width:11px;height:11px;border-radius:4px;grid-row:1 / span 2;
+}
+.projection-legend-item b{font-size:10px}
+.projection-legend-item small{font-size:9px;color:var(--muted);line-height:1.2}
+.projection-legend-item.official i{background:var(--success)}
+.projection-legend-item.projected i{background:color-mix(in srgb,var(--success) 48%,white)}
+.projection-legend-item.neutral i{background:var(--border)}
+@media(max-width:640px){
+  .projection-legend{grid-template-columns:1fr}
+  .projection-legend-item{grid-template-columns:11px minmax(0,1fr) auto}
+  .projection-legend-item small{grid-column:3;grid-row:1}
+}
