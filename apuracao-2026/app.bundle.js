@@ -1,4 +1,4 @@
-/* Apuracao 2026 browser bundle v4.2 */
+/* Apuracao 2026 browser bundle v4.3 */
 function tseInt(v){return Number(String(v??'0').replace(/\./g,'').replace(',','.'))||0}
 function tsePct(v){return Number(String(v??'0').replace(',','.'))||0}
 function roundQE(vv,seats){if(seats<=0)return 0;const raw=vv/seats,f=Math.floor(raw);return raw-f>0.5?f+1:f}
@@ -39,7 +39,7 @@ const CARGO={'1':'Presidente','3':'Governador','5':'Senador','6':'Deputado Feder
 const COLORS=['#7c3aed','#2563eb','#0891b2','#0f9f6e','#d97706','#db2777','#4f46e5','#65a30d','#ea580c','#9333ea','#0284c7','#059669','#ca8a04','#be123c','#6366f1','#15803d','#c2410c','#a21caf'];
 const S={
   codes:{fed:'6257',est:'6259'},view:'agora',uf:'MG',cargo:'3',cache:new Map(),governors:null,
-  congress:{camara:null,senado:null},poll:null,loading:new Set(),lastRefresh:null
+  congress:{camara:null,senado:null},poll:null,loading:new Set(),lastRefresh:null,candidateIndex:new Map()
 };
 
 const $=s=>document.querySelector(s);
@@ -117,13 +117,13 @@ function electionAlert(r,cargo){
   return `<div class="alert waiting">Apuração parcial do TSE: <strong>${pct(r.pctTotalizado)}</strong> das seções totalizadas. “Liderando” não significa eleito.</div>`;
 }
 function candidateRow(c,r,cargo,index){
-  const oi=officialInfo(c,r,cargo,index);
+  const oi=officialInfo(c,r,cargo,index),fav=candidateForFavorite(c,r,cargo);
   return `<div class="candidate-row">
     <div class="rank">${index+1}º</div>${avatar(c)}
     <div><div class="cand-name">${esc(c.nome)}</div><div class="cand-meta">${esc(c.numero)} · ${esc(c.partido)} · ${fmt(c.votos)} votos</div>
       <div class="vote-bar"><span style="width:${clamp(c.pct)}%"></span></div>${oi?`<span class="${oi.cls}">${esc(oi.label)}</span>`:''}
     </div>
-    <div class="right-stat"><strong>${pct(c.pct)}</strong><small>${r?.pctTotalizado?pct(r.pctTotalizado)+' apurado':''}</small></div>
+    <div class="right-stat candidate-actions">${favoriteButton(fav)}<strong>${pct(c.pct)}</strong><small>${r?.pctTotalizado?pct(r.pctTotalizado)+' apurado':''}</small></div>
   </div>`;
 }
 function donut(r){
@@ -143,7 +143,7 @@ function orderedCandidates(r){
 function renderLeaderCards(r,cargo,limit=2){
   if((r?.pctTotalizado||0)===0)return `<div class="empty">Aguardando votos · ${(r?.candidatos||[]).length} candidaturas carregadas.</div>`;
   const cs=orderedCandidates(r).slice(0,limit);
-  return cs.map((c,i)=>{const oi=officialInfo(c,r,cargo,i);return `<div class="leader-card">${avatar(c)}<div><div class="cand-name">${esc(c.nome)}</div><div class="cand-meta">${esc(c.numero)} · ${esc(c.partido)} · ${fmt(c.votos)} votos</div>${oi?`<span class="${oi.cls}">${esc(oi.label)}</span>`:''}</div><div class="cand-pct">${pct(c.pct)}</div></div>`}).join('')||'<div class="empty">Aguardando candidatos.</div>';
+  return cs.map((c,i)=>{const oi=officialInfo(c,r,cargo,i),fav=candidateForFavorite(c,r,cargo);return `<div class="leader-card">${avatar(c)}<div><div class="cand-name">${esc(c.nome)}</div><div class="cand-meta">${esc(c.numero)} · ${esc(c.partido)} · ${fmt(c.votos)} votos</div>${oi?`<span class="${oi.cls}">${esc(oi.label)}</span>`:''}</div><div class="leader-side">${favoriteButton(fav)}<div class="cand-pct">${pct(c.pct)}</div></div></div>`}).join('')||'<div class="empty">Aguardando candidatos.</div>';
 }
 function recordPresident(r){
   if(!(r.pctTotalizado>0))return;
@@ -170,7 +170,7 @@ async function loadAgora(force=false){
   host.innerHTML=`
     <div class="page-head"><div><div class="eyebrow">Eleições Gerais 2026</div><h1 class="page-title">Apuração em tempo real</h1><div class="page-sub">Dados oficiais do TSE, com atualização automática a cada 30 segundos.</div></div><div class="source-pill"><span class="live-dot"></span> Fonte oficial · TSE</div></div>
     <div class="hero-grid">
-      <section class="card hero-card"><div class="section-head"><div><div class="eyebrow">Presidente · Brasil</div><div class="section-title">${esc(defined)}</div></div><button class="ghost-btn" data-go="presidente">ver detalhes →</button></div>
+      <section class="card hero-card"><div class="section-head"><div><div class="eyebrow">Presidente · Brasil</div><div class="section-title">${esc(defined)}</div></div><button class="card-action" data-go="presidente">Detalhes <span>→</span></button></div>
         <div class="progress-row"><div class="progress"><span style="width:${clamp(pres.pctTotalizado)}%"></span></div><strong class="progress-pct">${pct(pres.pctTotalizado)}</strong></div>
         ${electionAlert(pres,'1')}<div class="leader-grid">${renderLeaderCards(pres,'1',2)}</div>
       </section>
@@ -181,8 +181,8 @@ async function loadAgora(force=false){
       </aside>
     </div>
     <section class="section"><div class="section-head"><div><div class="eyebrow">Mapa rápido</div><div class="section-title">Governadores por UF</div></div><div class="section-note">clique para abrir o estado</div></div><div class="uf-grid">${renderGovernorGrid(gov)}</div></section>
-    <section class="section"><div class="info-grid"><div class="card info-card"><h3>Câmara dos Deputados</h3><p>513 cadeiras. O painel Congresso mostra a distribuição nacional por partido/federação usando <strong>TSE agora</strong> e as cadeiras já atribuídas em cada UF.</p><button class="ghost-btn" data-go="congresso">abrir Congresso →</button></div><div class="card info-card"><h3>Senado Federal</h3><p>54 vagas em disputa em 2026, duas por UF. Antes da definição oficial mostramos os dois líderes; depois, somente o status de eleito informado pelo TSE.</p><button class="ghost-btn" data-go="congresso">ver Senado →</button></div></div></section>`;
-  wireGo();
+    <section class="section"><div class="info-grid"><div class="card info-card"><h3>Câmara dos Deputados</h3><p>513 cadeiras. O painel Congresso mostra a distribuição nacional por partido/federação usando <strong>TSE agora</strong> e as cadeiras já atribuídas em cada UF.</p><button class="card-action" data-go="congresso">Congresso <span>→</span></button></div><div class="card info-card"><h3>Senado Federal</h3><p>54 vagas em disputa em 2026, duas por UF. Antes da definição oficial mostramos os dois líderes; depois, somente o status de eleito informado pelo TSE.</p><button class="card-action" data-go="congresso">Senado <span>→</span></button></div></div></section>`;
+  wireGo();syncFavoriteButtons();wireFavorites(host);
 }
 function renderGovernorGrid(gov){
   if(!gov?.states)return UFS.map(([uf])=>`<button class="uf-card" data-uf="${uf}"><strong>${uf}</strong><span>abrir</span></button>`).join('');
@@ -205,7 +205,7 @@ async function loadPresident(force=false){
       <div class="card pad"><div class="eyebrow">Votos</div><div class="section-title">Composição</div>${donut(r)}<div class="stats-grid"><div class="stat-box"><span>Eleitorado</span><strong>${fmt(r.eleitorado)}</strong></div><div class="stat-box"><span>Comparecimento</span><strong>${fmt(r.comparecimento)}</strong></div><div class="stat-box"><span>Abstenção</span><strong>${fmt(r.abstencao)}</strong></div><div class="stat-box"><span>Válidos</span><strong>${fmt(r.validos)}</strong></div></div></div>
       <div class="card pad"><div class="eyebrow">Evolução local</div><div class="section-title">Percentuais ao longo das atualizações</div><div style="margin-top:9px">${evolution()}</div></div>
     </aside>
-  </div>`;
+  </div>`;syncFavoriteButtons();wireFavorites(host);
 }
 function buildStateToolbar(){
   const opts=UFS.map(([u,n])=>`<option value="${u}" ${u===S.uf?'selected':''}>${n} (${u})</option>`).join('');
@@ -219,7 +219,7 @@ async function loadState(force=false){
   const cargo=S.uf==='DF'&&S.cargo==='7'?'8':S.uf!=='DF'&&S.cargo==='8'?'7':S.cargo;S.cargo=cargo;
   const r=await fetchResult(cargo,S.uf,force);
   host.innerHTML=`<div class="page-head"><div><div class="eyebrow">${esc(UF_NAME[S.uf])}</div><h1 class="page-title">${esc(CARGO[cargo])}</h1><div class="page-sub">${S.uf} · ${pct(r.pctTotalizado)} das seções totalizadas</div></div><div class="source-pill">TSE · ${esc(r.meta.dataGeracao||'')} ${esc(r.meta.horaGeracao||'')}</div></div>${buildStateToolbar()}${cargo==='3'||cargo==='5'?renderMajorState(r,cargo):renderProportional(r,cargo)}`;
-  wireStateControls();
+  wireStateControls();syncFavoriteButtons();wireFavorites(host);
 }
 function wireStateControls(){
   const sel=$('#ufSelect');if(sel)sel.onchange=()=>{S.uf=sel.value;if(S.uf==='DF'&&S.cargo==='7')S.cargo='8';if(S.uf!=='DF'&&S.cargo==='8')S.cargo='7';loadState(true)};
@@ -292,20 +292,258 @@ async function loadCongress(force=false){
 function renderSenateGrid(sen){
   return (sen.ufs||[]).map(u=>{const list=u.official?.length?u.official:u.leaders||[];return `<div class="senate-uf"><strong>${u.uf} · ${pct(u.pct||0)}</strong>${list.slice(0,2).map(c=>`<div class="senate-name ${c.official?'official':''}">${c.official?'✓ ':''}${esc(c.nome)} · ${esc(c.partido)}</div>`).join('')||'<div class="senate-name">aguardando</div>'}</div>`}).join('');
 }
+
+const FAVORITES_KEY='ap26-favorites-v1';
+function favoriteKey(c){
+  return [c.sqcand||c.id||c.numero||'',c.cargoCodigo||c.cargo||'',c.uf||''].join('|');
+}
+function getFavorites(){
+  try{
+    const list=JSON.parse(localStorage.getItem(FAVORITES_KEY)||'[]');
+    return Array.isArray(list)?list:[];
+  }catch{return[]}
+}
+function saveFavorites(list){
+  localStorage.setItem(FAVORITES_KEY,JSON.stringify(list.slice(0,100)));
+}
+function registerCandidate(c){
+  const key=favoriteKey(c);
+  if(key)S.candidateIndex.set(key,c);
+  return key;
+}
+function isFavorite(c){
+  const key=favoriteKey(c);
+  return getFavorites().some(x=>favoriteKey(x)===key);
+}
+function candidateForFavorite(c,r,cargo){
+  return {
+    ...c,
+    sqcand:c.sqcand||c.id||'',
+    cargoCodigo:String(cargo||c.cargoCodigo||''),
+    cargo:c.cargo||CARGO[String(cargo)]||String(cargo||'Candidato'),
+    uf:c.uf||r?.abrangencia||(String(cargo)==='1'?'BR':''),
+    percentual:c.percentual??c.pct??0,
+    status:c.status||c.st||c.situacaoOficial||'',
+    foto:c.foto||c.fotoUrl||''
+  };
+}
+function favoriteButton(c){
+  const key=registerCandidate(c),favs=getFavorites(),idx=favs.findIndex(x=>favoriteKey(x)===key),on=idx>=0;
+  if(on){
+    favs[idx]={...favs[idx],...c};
+    saveFavorites(favs);
+  }
+  return `<button class="favorite-btn ${on?'active':''}" data-favorite-key="${encodeURIComponent(key)}" aria-label="${on?'Remover dos favoritos':'Adicionar aos favoritos'}" title="${on?'Remover dos favoritos':'Favoritar'}">${on?'★':'☆'}</button>`;
+}
+function updateFavoriteSnapshots(results){
+  const fresh=new Map((results||[]).map(c=>[favoriteKey(c),c]));
+  const favs=getFavorites();let changed=false;
+  const next=favs.map(old=>{const n=fresh.get(favoriteKey(old));if(n){changed=true;return n}return old});
+  if(changed)saveFavorites(next);
+}
+function searchResultCard(c,{favoriteContext=false}={}){
+  const status=c.status||c.st||'';
+  return `<div class="search-result ${favoriteContext?'favorite-card':''}" data-candidate-key="${esc(favoriteKey(c))}">
+    ${avatar(c)}
+    <div><div class="result-context">${esc(c.cargo)} · ${esc(c.uf)}</div><div class="cand-name">${esc(c.nome)}</div>
+      <div class="cand-meta">${esc(c.numero)} · ${esc(c.partido)} · ${fmt(c.votos)} votos</div>
+      ${status?`<span class="${/Não eleito|Suplente/i.test(status)?'supp-badge':'official-badge'}">${esc(status)} · TSE</span>`:''}
+    </div>
+    <div class="result-actions">${favoriteButton(c)}<div class="right-stat"><strong>${pct(c.percentual??c.pct)}</strong></div></div>
+  </div>`;
+}
+function updateFavoriteBadges(){
+  const n=getFavorites().length;
+  $$('[data-fav-badge]').forEach(el=>{el.textContent=String(n);el.classList.toggle('hidden',n===0)});
+}
+function renderFavorites(){
+  updateFavoriteBadges();
+}
+function favoriteCargoCode(c){
+  if(c.cargoCodigo)return String(c.cargoCodigo);
+  const label=String(c.cargo||'').toLowerCase();
+  if(label.includes('presidente'))return '1';
+  if(label.includes('governador'))return '3';
+  if(label.includes('senador'))return '5';
+  if(label.includes('federal'))return '6';
+  if(label.includes('distrital'))return '8';
+  if(label.includes('estadual'))return '7';
+  return '';
+}
+function favoritePageCard(c){
+  registerCandidate(c);
+  const status=c.status||c.st||c.situacaoOficial||'';
+  return `<div class="favorite-page-card">
+    ${avatar(c)}
+    <div class="favorite-main"><div class="result-context">${esc(c.cargo||CARGO[favoriteCargoCode(c)]||'Candidato')} · ${esc(c.uf||'')}</div>
+      <div class="cand-name">${esc(c.nome)}</div>
+      <div class="cand-meta">${esc(c.numero)} · ${esc(c.partido)} · ${fmt(c.votos)} votos</div>
+      ${status?`<span class="${/Não eleito|Suplente/i.test(status)?'supp-badge':'official-badge'}">${esc(status)} · TSE</span>`:''}
+    </div>
+    <div class="favorite-side">${favoriteButton(c)}<strong>${pct(c.percentual??c.pct)}</strong></div>
+  </div>`;
+}
+function renderFavoritesPage(){
+  const host=$('#favoritesContent');if(!host)return;
+  const favs=getFavorites();
+  favs.forEach(registerCandidate);
+  updateFavoriteBadges();
+  if(!favs.length){
+    host.innerHTML=`<div class="page-head"><div><div class="eyebrow">Acompanhamento</div><h1 class="page-title">Favoritos</h1><div class="page-sub">Seus candidatos favoritos, de qualquer cargo, ficam reunidos aqui.</div></div></div>
+      <div class="card pad favorite-empty"><div class="favorite-empty-star">☆</div><h3>Nenhum favorito ainda</h3><p>Vá em Buscar ou abra um cargo e toque na estrela do candidato.</p><button class="modern-link-btn" data-go="buscar">Buscar candidatos <span>→</span></button></div>`;
+    wireGo();return;
+  }
+  const order=['1','3','5','6','7','8'];
+  const groups=new Map();
+  for(const c of favs){const code=favoriteCargoCode(c)||'outro';if(!groups.has(code))groups.set(code,[]);groups.get(code).push(c)}
+  const codes=[...order.filter(x=>groups.has(x)),...([...groups.keys()].filter(x=>!order.includes(x)))];
+  host.innerHTML=`<div class="page-head"><div><div class="eyebrow">Acompanhamento</div><h1 class="page-title">Favoritos</h1><div class="page-sub">${favs.length} candidato(s) salvo(s) neste aparelho · atualizados com dados do TSE.</div></div><div class="favorite-total">★ ${favs.length}</div></div>
+    <div class="favorite-groups">${codes.map(code=>{
+      const items=groups.get(code).slice().sort((x,y)=>String(x.uf||'').localeCompare(String(y.uf||''),'pt-BR')||String(x.nome||'').localeCompare(String(y.nome||''),'pt-BR'));
+      return `<section class="card favorite-group"><div class="favorite-group-head"><div><span class="eyebrow">${esc(CARGO[code]||'Candidatos')}</span><strong>${items.length} favorito(s)</strong></div></div><div class="favorite-page-list">${items.map(favoritePageCard).join('')}</div></section>`;
+    }).join('')}</div>`;
+  wireFavorites(host);
+}
+async function refreshFavorites(force=false){
+  const favs=getFavorites();if(!favs.length){renderFavoritesPage();return}
+  const groups=new Map();
+  for(const f of favs){
+    const cargo=favoriteCargoCode(f);if(!cargo)continue;
+    const uf=cargo==='1'?'BR':String(f.uf||'').toUpperCase();if(!uf)continue;
+    const k=cargo+':'+uf;if(!groups.has(k))groups.set(k,{cargo,uf,items:[]});groups.get(k).items.push(f);
+  }
+  const entries=[...groups.values()];
+  const updated=new Map(favs.map(x=>[favoriteKey(x),x]));
+  for(let i=0;i<entries.length;i+=4){
+    const batch=entries.slice(i,i+4);
+    const docs=await Promise.all(batch.map(async g=>{try{return{g,r:await fetchResult(g.cargo,g.uf,force)}}catch{return{g,r:null}}}));
+    for(const {g,r} of docs){
+      if(!r)continue;
+      for(const old of g.items){
+        const id=String(old.sqcand||old.id||''),num=String(old.numero||'');
+        const c=r.candidatos.find(x=>String(x.id||x.sqcand||'')===id)||(num?r.candidatos.find(x=>String(x.numero||'')===num):null);
+        if(c){
+          const fresh=candidateForFavorite(c,r,g.cargo);
+          const oldKey=favoriteKey(old);
+          updated.delete(oldKey);
+          updated.set(favoriteKey(fresh),fresh);
+        }
+      }
+    }
+  }
+  saveFavorites([...updated.values()]);
+  renderFavoritesPage();
+  syncFavoriteButtons();
+}
+async function loadFavorites(force=false){
+  renderFavoritesPage();
+  await refreshFavorites(force);
+}
+function syncFavoriteButtons(){
+  $$('[data-favorite-key]').forEach(btn=>{
+    let key='';try{key=decodeURIComponent(btn.dataset.favoriteKey||'')}catch{key=btn.dataset.favoriteKey||''}
+    const on=getFavorites().some(x=>favoriteKey(x)===key);
+    btn.classList.toggle('active',on);
+    btn.textContent=on?'★':'☆';
+    btn.setAttribute('aria-label',on?'Remover dos favoritos':'Adicionar aos favoritos');
+    btn.title=on?'Remover dos favoritos':'Favoritar';
+  });
+}
+function toggleFavorite(key){
+  const favs=getFavorites(),idx=favs.findIndex(x=>favoriteKey(x)===key);
+  if(idx>=0)favs.splice(idx,1);
+  else{
+    const c=S.candidateIndex.get(key);
+    if(!c)return;
+    favs.unshift(c);
+  }
+  saveFavorites(favs);
+  if(navigator.vibrate)navigator.vibrate(25);
+  renderFavorites();
+  syncFavoriteButtons();
+  if(S.view==='favoritos')loadFavoritesView();
+}
+function wireFavorites(root=document){
+  root.querySelectorAll('[data-favorite-key]').forEach(btn=>{
+    btn.onclick=e=>{
+      e.preventDefault();e.stopPropagation();
+      let key='';try{key=decodeURIComponent(btn.dataset.favoriteKey||'')}catch{key=btn.dataset.favoriteKey||''}
+      toggleFavorite(key);
+    };
+  });
+}
+
 function searchUI(){
   const ufOpts='<option value="">Brasil inteiro</option>'+UFS.map(([u,n])=>`<option value="${u.toLowerCase()}" ${u==='MG'?'selected':''}>${n} (${u})</option>`).join('');
-  return `<div class="page-head"><div><div class="eyebrow">Base oficial 2026</div><h1 class="page-title">Buscar candidato</h1><div class="page-sub">Busca global por nome, número ou partido — não depende das telas que você abriu.</div></div></div>
-  <div class="card search-card"><div class="search-controls"><input id="searchInput" class="search-input" placeholder="Ex.: Ana Paula Siqueira, 13444, PT" autocomplete="off"><select id="searchUF" class="search-select">${ufOpts}</select><select id="searchCargo" class="search-select"><option value="">Todos os cargos</option><option value="1">Presidente</option><option value="3">Governador</option><option value="5">Senador</option><option value="6">Dep. Federal</option><option value="7">Dep. Estadual</option><option value="8">Dep. Distrital</option></select><button id="searchBtn" class="primary-btn">Buscar</button></div><div class="search-meta" id="searchMeta">UF padrão: Minas Gerais. Escolha “Brasil inteiro” para varrer todas as UFs.</div><div id="searchResults" class="search-results"></div></div>`;
+  return `<div class="page-head"><div><div class="eyebrow">Base oficial 2026</div><h1 class="page-title">Buscar candidato</h1><div class="page-sub">Busque e toque na estrela para acompanhar seus candidatos favoritos.</div></div></div>
+  <div class="card search-card">
+    <div class="search-controls"><input id="searchInput" class="search-input" placeholder="Ex.: Ana Paula Siqueira, 13444, PT" autocomplete="off"><select id="searchUF" class="search-select">${ufOpts}</select><select id="searchCargo" class="search-select"><option value="">Todos os cargos</option><option value="1">Presidente</option><option value="3">Governador</option><option value="5">Senador</option><option value="6">Dep. Federal</option><option value="7">Dep. Estadual</option><option value="8">Dep. Distrital</option></select><button id="searchBtn" class="primary-btn">Buscar</button></div>
+    <div class="search-meta" id="searchMeta">UF padrão: Minas Gerais. Escolha “Brasil inteiro” para varrer todas as UFs.</div>
+    <div id="searchResults" class="search-results"></div>
+  </div>`;
 }
 function initSearch(){
-  const host=$('#searchContent');if(!host.dataset.ready){host.innerHTML=searchUI();host.dataset.ready='1'}
-  const btn=$('#searchBtn'),input=$('#searchInput');btn.onclick=doSearch;input.onkeydown=e=>{if(e.key==='Enter')doSearch()};
+  const host=$('#searchContent');
+  if(!host.dataset.ready){host.innerHTML=searchUI();host.dataset.ready='1'}
+  const btn=$('#searchBtn'),input=$('#searchInput');
+  btn.onclick=doSearch;
+  input.onkeydown=e=>{if(e.key==='Enter')doSearch()};
 }
 async function doSearch(){
-  const q=$('#searchInput').value.trim(),uf=$('#searchUF').value,cargo=$('#searchCargo').value;if(q.length<3){$('#searchMeta').textContent='Digite pelo menos 3 caracteres.';return}
-  const btn=$('#searchBtn');btn.disabled=true;btn.textContent='Buscando…';$('#searchResults').innerHTML='<div class="card compact-pad loading"><div class="empty">Consultando arquivos oficiais do TSE…</div></div>';
-  try{const r=await fetch('/api/search?q='+encodeURIComponent(q)+(uf?'&uf='+encodeURIComponent(uf):'')+(cargo?'&cargo='+encodeURIComponent(cargo):''),{cache:'no-store'});const j=await r.json();$('#searchMeta').textContent=`${j.count||0} resultado(s) · ${j.scanned||0} arquivo(s) oficiais consultados`;$('#searchResults').innerHTML=(j.results||[]).map(c=>`<div class="search-result">${avatar(c)}<div><div class="result-context">${esc(c.cargo)} · ${esc(c.uf)}</div><div class="cand-name">${esc(c.nome)}</div><div class="cand-meta">${esc(c.numero)} · ${esc(c.partido)} · ${fmt(c.votos)} votos</div>${c.st?`<span class="${/Não eleito|Suplente/i.test(c.st)?'supp-badge':'official-badge'}">${esc(c.st)} · TSE</span>`:''}</div><div class="right-stat"><strong>${pct(c.percentual)}</strong></div></div>`).join('')||'<div class="empty">Nenhum candidato encontrado nos arquivos consultados.</div>'}catch(e){$('#searchMeta').textContent='Falha temporária ao consultar o TSE.';$('#searchResults').innerHTML='<div class="empty">Tente novamente em alguns segundos.</div>'}finally{btn.disabled=false;btn.textContent='Buscar'}
+  const q=$('#searchInput').value.trim(),uf=$('#searchUF').value,cargo=$('#searchCargo').value;
+  if(q.length<3){$('#searchMeta').textContent='Digite pelo menos 3 caracteres.';return}
+  const btn=$('#searchBtn');
+  btn.disabled=true;btn.textContent='Buscando…';
+  $('#searchResults').innerHTML='<div class="card compact-pad loading"><div class="empty">Consultando arquivos oficiais do TSE…</div></div>';
+  try{
+    const r=await fetch('/api/search?q='+encodeURIComponent(q)+(uf?'&uf='+encodeURIComponent(uf):'')+(cargo?'&cargo='+encodeURIComponent(cargo):''),{cache:'no-store'});
+    const j=await r.json();
+    const results=j.results||[];
+    results.forEach(registerCandidate);
+    updateFavoriteSnapshots(results);
+    $('#searchMeta').textContent=`${j.count||0} resultado(s) · ${j.scanned||0} arquivo(s) oficiais consultados`;
+    $('#searchResults').innerHTML=results.map(c=>searchResultCard(c)).join('')||'<div class="empty">Nenhum candidato encontrado nos arquivos consultados.</div>';
+    wireFavorites($('#searchResults'));
+    syncFavoriteButtons();
+  }catch(e){
+    $('#searchMeta').textContent='Falha temporária ao consultar o TSE.';
+    $('#searchResults').innerHTML='<div class="empty">Tente novamente em alguns segundos.</div>';
+  }finally{
+    btn.disabled=false;btn.textContent='Buscar';
+  }
 }
+
+
+function loadFavoritesView(){
+  const host=$('#favoritesContent');
+  if(!host)return;
+  const favs=getFavorites();
+  favs.forEach(registerCandidate);
+  if(!favs.length){
+    host.innerHTML=`<div class="page-head"><div><div class="eyebrow">Acompanhamento pessoal</div><h1 class="page-title">Favoritos</h1><div class="page-sub">Todos os candidatos que você marcar com ★ ficam aqui.</div></div></div>
+    <div class="card pad favorites-empty"><div class="favorites-empty-icon">☆</div><h3>Nenhum favorito ainda</h3><p>Abra Buscar, Presidente ou Estados e toque na estrela de qualquer candidato. Vale para todos os cargos.</p><button class="primary-btn" data-go="buscar">Buscar candidatos</button></div>`;
+    wireGo();
+    return;
+  }
+  const order=['Presidente','Governador','Senador','Deputado Federal','Deputado Estadual','Deputado Distrital'];
+  const groups=new Map();
+  for(const c of favs){
+    const name=c.cargo||CARGO[String(c.cargoCodigo)]||'Outros';
+    if(!groups.has(name))groups.set(name,[]);
+    groups.get(name).push(c);
+  }
+  const names=[...groups.keys()].sort((x,y)=>{
+    const ix=order.indexOf(x),iy=order.indexOf(y);
+    return (ix<0?99:ix)-(iy<0?99:iy)||x.localeCompare(y,'pt-BR');
+  });
+  host.innerHTML=`<div class="page-head"><div><div class="eyebrow">Acompanhamento pessoal</div><h1 class="page-title">Favoritos</h1><div class="page-sub">${favs.length} candidato(s) salvo(s) neste aparelho, de qualquer cargo.</div></div><div class="favorites-total">★ ${favs.length}</div></div>
+  <div class="favorites-groups">${names.map(name=>{
+    const list=groups.get(name)||[];
+    return `<section class="card favorites-group"><div class="favorites-group-head"><div><div class="eyebrow">${esc(name)}</div><div class="section-title">${list.length} favorito(s)</div></div></div><div class="search-results favorite-list">${list.map(c=>searchResultCard(c,{favoriteContext:true})).join('')}</div></section>`;
+  }).join('')}</div>`;
+  wireFavorites(host);
+}
+
 function loadHow(){
   const host=$('#howContent');host.innerHTML=`<div class="page-head"><div><div class="eyebrow">Transparência</div><h1 class="page-title">Como funciona</h1><div class="page-sub">O app separa dado oficial de cálculo próprio.</div></div></div><div class="info-grid">
   <div class="card info-card"><h3>ELEITO / 2º TURNO · TSE</h3><p>Para Presidente e Governador, o campo <strong>md</strong> do arquivo oficial indica quando a eleição fica matematicamente definida antes do fim: <strong>e</strong> = eleito e <strong>s</strong> = segundo turno. O candidato correspondente vem com <strong>e=s</strong>.</p></div>
@@ -319,9 +557,11 @@ async function loadView(view,force=false){
     else if(view==='presidente')await loadPresident(force);
     else if(view==='estados')await loadState(force);
     else if(view==='congresso')await loadCongress(force);
+    else if(view==='favoritos')await loadFavorites(force);
     else if(view==='buscar')initSearch();
+    else if(view==='favoritos')loadFavoritesView();
     else if(view==='como')loadHow();
-  }catch(e){const id=view==='presidente'?'presidentContent':view==='estados'?'stateContent':view==='congresso'?'congressContent':view==='buscar'?'searchContent':view==='como'?'howContent':'agoraContent';$('#'+id).innerHTML=`<div class="card pad"><div class="alert danger">Não foi possível carregar esta tela agora. ${esc(e.message||'')} <button class="ghost-btn" id="retryBtn">tentar novamente</button></div></div>`;$('#retryBtn')?.addEventListener('click',()=>loadView(view,true))}
+  }catch(e){const id=view==='presidente'?'presidentContent':view==='estados'?'stateContent':view==='congresso'?'congressContent':view==='buscar'?'searchContent':view==='favoritos'?'favoritesContent':view==='como'?'howContent':'agoraContent';$('#'+id).innerHTML=`<div class="card pad"><div class="alert danger">Não foi possível carregar esta tela agora. ${esc(e.message||'')} <button class="ghost-btn" id="retryBtn">tentar novamente</button></div></div>`;$('#retryBtn')?.addEventListener('click',()=>loadView(view,true))}
 }
 function showView(view){
   S.view=view;$$('.view').forEach(v=>v.classList.toggle('active',v.id==='view-'+view));$$('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));window.scrollTo(0,0);loadView(view,false);restartPoll();
@@ -329,13 +569,13 @@ function showView(view){
 function wireGo(){
   $$('[data-go]').forEach(b=>b.onclick=()=>showView(b.dataset.go));$$('[data-uf]').forEach(b=>b.onclick=()=>{S.uf=b.dataset.uf;S.cargo='3';showView('estados')});
 }
-function restartPoll(){clearInterval(S.poll);if(['agora','presidente','estados','congresso'].includes(S.view))S.poll=setInterval(()=>{if(document.visibilityState==='visible')loadView(S.view,true)},30000)}
+function restartPoll(){clearInterval(S.poll);if(['agora','presidente','estados','congresso','favoritos'].includes(S.view))S.poll=setInterval(()=>{if(document.visibilityState==='visible')loadView(S.view,true)},30000)}
 function setTheme(t){document.documentElement.dataset.theme=t;localStorage.setItem('ap26-theme',t);$('#themeBtn').textContent=t==='dark'?'☀':'☾'}
 function initTheme(){const t=localStorage.getItem('ap26-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');setTheme(t)}
 async function boot(){
   initTheme();$('#themeBtn').onclick=()=>setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');$('#refreshBtn').onclick=()=>loadView(S.view,true);
   $$('[data-view]').forEach(b=>b.onclick=()=>showView(b.dataset.view));$('.brand').onclick=()=>showView('agora');
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')loadView(S.view,true)});
-  await discoverCodes();showView('agora');
+  await discoverCodes();updateFavoriteBadges();showView('agora');
 }
 boot();
