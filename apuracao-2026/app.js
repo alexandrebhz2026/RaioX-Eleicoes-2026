@@ -721,10 +721,10 @@ async function loadElected(force=false){
     S.governors=gov;S.congress={camara:agg.cam,senado:agg.sen};
 
     if(include('1')){
-      const off=pres.candidatos.filter(c=>officialCandidate(c));
-      const list=mode==='official'?off:[];
-      officialCount+=off.length;
-      sections.push(electedSection('Presidente','Brasil',list.map(c=>electedCandidateCard(c,{cargo:'1',uf:'BR',kind:'official',status:c.situacaoOficial||'ELEITO TSE'})).join(''),list.length));
+      const marked=pres.candidatos.map((c,i)=>({c,info:officialInfo(c,pres,'1',i)})).filter(x=>x.info?.official);
+      const list=mode==='official'?marked:(marked.length?marked:(pres.pctTotalizado>0?[{c:pres.candidatos[0],info:officialInfo(pres.candidatos[0],pres,'1',0)}]:[]));
+      officialCount+=mode==='official'?list.length:0;projectionCount+=mode==='projection'&&!marked.length?list.length:0;
+      sections.push(electedSection('Presidente','Brasil',list.map(x=>electedCandidateCard(x.c,{cargo:'1',uf:'BR',kind:x.info?.official?'official':'projection',status:x.info?.label||'LIDERANDO · não oficial'})).join(''),list.length));
     }
     if(include('3')){
       const rows=[];
@@ -760,11 +760,19 @@ async function loadElected(force=false){
       if(!include(cargo))continue;
       let list=[],cards='';
       if(cargo==='3'||cargo==='5'){
-        const official=r.candidatos.filter(officialCandidate);
-        if(mode==='official')list=official;
-        else list=official.length?official:(r.pctTotalizado>0?r.candidatos.slice(0,cargo==='5'?2:1):[]);
-        cards=list.map((c,i)=>electedCandidateCard(c,{cargo,uf,kind:officialCandidate(c)?'official':'projection',status:officialCandidate(c)?(c.situacaoOficial||'ELEITO TSE'):(cargo==='5'?'NAS 2 VAGAS AGORA · não oficial':'LIDERANDO · não oficial')})).join('');
-        officialCount+=list.filter(officialCandidate).length;projectionCount+=list.filter(c=>!officialCandidate(c)).length;
+        const marked=r.candidatos.map((c,i)=>({c,info:officialInfo(c,r,cargo,i)})).filter(x=>x.info?.official);
+        const needed=cargo==='5'?2:1;
+        if(mode==='official')list=marked;
+        else{
+          list=marked.slice();
+          if(r.pctTotalizado>0&&list.length<needed){
+            for(let i=0;i<r.candidatos.length&&list.length<needed;i++){
+              const c=r.candidatos[i];if(!list.some(x=>String(x.c.id)===String(c.id)))list.push({c,info:officialInfo(c,r,cargo,i)});
+            }
+          }
+        }
+        cards=list.map((x,i)=>electedCandidateCard(x.c,{cargo,uf,kind:x.info?.official?'official':'projection',status:x.info?.label||(cargo==='5'?'NAS 2 VAGAS AGORA · não oficial':'LIDERANDO · não oficial')})).join('');
+        officialCount+=list.filter(x=>x.info?.official).length;projectionCount+=list.filter(x=>!x.info?.official).length;
       }else{
         const calc=calcularProporcional(r);
         if(mode==='official')list=r.candidatos.filter(officialCandidate).map(c=>({candidato:c,motivo:''}));
