@@ -591,8 +591,25 @@ function wireProportionalCandidateRanking(host){
   };
 }
 
+function renderDeputyCutLine(calc,r,cargo){
+  const last=calc?.linhaDeCorte?.ultimoEleito,first=calc?.linhaDeCorte?.primeirosDeFora?.[0];
+  if(!last||!first)return `<section class="card cutline-card"><div class="section-head"><div><div class="eyebrow">Linha de corte</div><div class="section-title">Última vaga projetada</div></div></div><div class="empty">A linha de corte aparecerá quando o cálculo conseguir atribuir as vagas sem empate indefinido.</div></section>`;
+  const groupOut=r.partidos.find(g=>String(g.id)===String(first.grupoId));
+  const reason=last.motivo==='QP'?'eleito por QP':'vaga por média/sobra';
+  const diff=calc.linhaDeCorte.diferencaVotos;
+  return `<section class="card cutline-card">
+    <div class="section-head"><div><div class="eyebrow">Linha de corte · ${esc(CARGO[String(cargo)])}</div><div class="section-title">Quem está dentro e quem está fora agora</div></div><div class="section-note">projeção do app · não oficial</div></div>
+    <div class="cutline-grid">
+      <div class="cutline-person in"><span class="cutline-kicker">Última vaga projetada</span>${avatar(last.candidato)}<div><strong>${esc(last.candidato.nome)}</strong><span>${esc(last.grupoSigla||last.candidato.partido)} · ${fmt(last.candidato.votos)} votos</span><b>${esc(reason)}</b></div></div>
+      <div class="cutline-gap"><span>Diferença nominal</span><strong>${fmt(diff||0)}</strong><small>votos entre os dois candidatos</small></div>
+      <div class="cutline-person out"><span class="cutline-kicker">Primeiro fora</span>${avatar(first)}<div><strong>${esc(first.nome)}</strong><span>${esc(groupOut?.sigla||first.partido)} · ${fmt(first.votos)} votos</span><b>fora das vagas neste momento</b></div></div>
+    </div>
+    <div class="cutline-note">A linha de corte é uma leitura do cálculo proporcional atual. QP, sobras, médias e votos dos grupos podem alterar quem ocupa a última vaga mesmo sem uma ultrapassagem simples em votos nominais.</div>
+  </section>`;
+}
+
 function renderProportional(r,cargo){
-  const calc=calcularProporcional(r),calcBy=new Map(calc.partidos.map(x=>[x.id,x])),officialElected=r.candidatos.filter(c=>c.eleitoTse||(/Eleito/i.test(c.situacaoOficial)&&!/Não eleito/i.test(c.situacaoOficial)));
+  const calc=calcularProporcional(r);recordDeputyProjectionEvents(r,cargo,calc);const calcBy=new Map(calc.partidos.map(x=>[x.id,x])),officialElected=r.candidatos.filter(c=>c.eleitoTse||(/Eleito/i.test(c.situacaoOficial)&&!/Não eleito/i.test(c.situacaoOficial)));
   const rows=r.partidos.map(g=>{const c=calcBy.get(g.id);return{...g,app:c?.total||0,qp:c?.qp||0,sobra:c?.vagasSobra||0,pctQE:c?.pctQE||0}}).sort((a,b)=>(b.vagasOficiais||0)-(a.vagasOficiais||0)||b.app-a.app||b.votosValidos-a.votosValidos);
   const qeTse=r.qe||0,qeApp=calc.qe||0;
   return `
@@ -604,6 +621,7 @@ function renderProportional(r,cargo){
     <div class="card prop-metric"><span>Seções/urnas totalizadas</span><strong>${fmt(r.secoesTotalizadas)}</strong><small>de ${fmt(r.secoesTotal)} · ${pct(r.pctTotalizado)}</small></div>
   </div>
   <div class="thresholds"><div class="threshold"><small>10% do QE · mínimo individual do QP</small><strong>${fmt(Math.ceil(qeApp*.10))}</strong></div><div class="threshold"><small>20% do QE · candidato na 1ª sobra</small><strong>${fmt(Math.ceil(qeApp*.20))}</strong></div><div class="threshold"><small>80% do QE · grupo na 1ª sobra</small><strong>${fmt(Math.ceil(qeApp*.80))}</strong></div></div>
+  ${renderDeputyCutLine(calc,r,cargo)}
   ${r.pctTotalizado===0?'<div class="alert waiting" style="margin-top:12px">As <strong>'+fmt(r.vagas)+' vagas</strong> já são conhecidas. QE, QP, sobras e distribuição de cadeiras permanecem em zero até o TSE publicar votos válidos.</div>':''}
   <div class="prop-grid">
     <section class="card pad"><div class="section-head"><div><div class="eyebrow">Cadeiras por partido/federação</div><div class="section-title">TSE agora × cálculo do app</div></div><div class="section-note">“TSE agora” usa exatamente o campo vag do EA20</div></div>
