@@ -105,8 +105,13 @@ function donut(r){
 function officialSelected(r,cargo){
   return r.candidatos.filter((c,i)=>officialInfo(c,r,cargo,i)?.official);
 }
+function orderedCandidates(r){
+  const cs=(r?.candidatos||[]).slice();
+  return (r?.pctTotalizado||0)===0 ? cs.sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')) : cs;
+}
 function renderLeaderCards(r,cargo,limit=2){
-  const cs=(r.candidatos||[]).slice(0,limit);
+  if((r?.pctTotalizado||0)===0)return `<div class="empty">Aguardando votos · ${(r?.candidatos||[]).length} candidaturas carregadas.</div>`;
+  const cs=orderedCandidates(r).slice(0,limit);
   return cs.map((c,i)=>{const oi=officialInfo(c,r,cargo,i);return `<div class="leader-card">${avatar(c)}<div><div class="cand-name">${esc(c.nome)}</div><div class="cand-meta">${esc(c.numero)} · ${esc(c.partido)} · ${fmt(c.votos)} votos</div>${oi?`<span class="${oi.cls}">${esc(oi.label)}</span>`:''}</div><div class="cand-pct">${pct(c.pct)}</div></div>`}).join('')||'<div class="empty">Aguardando candidatos.</div>';
 }
 function recordPresident(r){
@@ -288,7 +293,7 @@ async function loadView(view,force=false){
   }catch(e){const id=view==='presidente'?'presidentContent':view==='estados'?'stateContent':view==='congresso'?'congressContent':view==='buscar'?'searchContent':view==='como'?'howContent':'agoraContent';$('#'+id).innerHTML=`<div class="card pad"><div class="alert danger">Não foi possível carregar esta tela agora. ${esc(e.message||'')} <button class="ghost-btn" id="retryBtn">tentar novamente</button></div></div>`;$('#retryBtn')?.addEventListener('click',()=>loadView(view,true))}
 }
 function showView(view){
-  S.view=view;$$('.view').forEach(v=>v.classList.toggle('active',v.id==='view-'+view));$$('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));window.scrollTo({top:0,behavior:'instant'});loadView(view,false);restartPoll();
+  S.view=view;$$('.view').forEach(v=>v.classList.toggle('active',v.id==='view-'+view));$$('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));window.scrollTo(0,0);loadView(view,false);restartPoll();
 }
 function wireGo(){
   $$('[data-go]').forEach(b=>b.onclick=()=>showView(b.dataset.go));$$('[data-uf]').forEach(b=>b.onclick=()=>{S.uf=b.dataset.uf;S.cargo='3';showView('estados')});
