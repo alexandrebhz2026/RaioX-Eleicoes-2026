@@ -1,0 +1,39 @@
+name: Apuracao 2026 Render QA
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'apuracao-2026/**'
+      - '.github/workflows/apuracao-render-qa.yml'
+
+jobs:
+  qa-render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wait for Render auto deploy
+        run: sleep 20
+      - name: Validate Render page in Chrome
+        run: |
+          set -e
+          base="https://apuracao-2026.onrender.com"
+          browser="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser)"
+          test -n "$browser"
+          for i in 1 2 3 4 5; do
+            "$browser" --headless --no-sandbox --disable-gpu --virtual-time-budget=15000 --dump-dom "$base/?qa=$GITHUB_SHA&try=$i" > /tmp/apuracao-render.html || true
+            if grep -q "Apuração em tempo real" /tmp/apuracao-render.html && grep -q "Favoritos" /tmp/apuracao-render.html; then
+              break
+            fi
+            sleep 10
+          done
+          grep -q "Apuração em tempo real" /tmp/apuracao-render.html
+          grep -q "Governadores por UF" /tmp/apuracao-render.html
+          grep -q "Favoritos" /tmp/apuracao-render.html
+          grep -q "card-action" apuracao-2026/app.css
+          grep -q "favorite-btn" apuracao-2026/app.css
+      - name: Validate live TSE proxy used by Render
+        run: |
+          set -e
+          curl -fsS --retry 3 "https://apuracao-2026-lake.vercel.app/api/search?q=ana%20paula%20siqueira&uf=mg&cargo=7" | grep -q "ANA PAULA SIQUEIRA"
+          curl -fsS --retry 3 "https://apuracao-2026-lake.vercel.app/api/tse?path=%2Foficial%2Fele2026%2F6257%2Fdados%2Fbr%2Fbr-c0001-e006257-u.json" | grep -q '"ele" : "6257"'
