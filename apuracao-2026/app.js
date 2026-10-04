@@ -86,13 +86,13 @@ function electionAlert(r,cargo){
   return `<div class="alert waiting">Apuração parcial do TSE: <strong>${pct(r.pctTotalizado)}</strong> das seções totalizadas. “Liderando” não significa eleito.</div>`;
 }
 function candidateRow(c,r,cargo,index){
-  const oi=officialInfo(c,r,cargo,index);
+  const oi=officialInfo(c,r,cargo,index),fav=candidateForFavorite(c,r,cargo);
   return `<div class="candidate-row">
     <div class="rank">${index+1}º</div>${avatar(c)}
     <div><div class="cand-name">${esc(c.nome)}</div><div class="cand-meta">${esc(c.numero)} · ${esc(c.partido)} · ${fmt(c.votos)} votos</div>
       <div class="vote-bar"><span style="width:${clamp(c.pct)}%"></span></div>${oi?`<span class="${oi.cls}">${esc(oi.label)}</span>`:''}
     </div>
-    <div class="right-stat"><strong>${pct(c.pct)}</strong><small>${r?.pctTotalizado?pct(r.pctTotalizado)+' apurado':''}</small></div>
+    <div class="right-stat candidate-actions">${favoriteButton(fav)}<strong>${pct(c.pct)}</strong><small>${r?.pctTotalizado?pct(r.pctTotalizado)+' apurado':''}</small></div>
   </div>`;
 }
 function donut(r){
@@ -112,7 +112,7 @@ function orderedCandidates(r){
 function renderLeaderCards(r,cargo,limit=2){
   if((r?.pctTotalizado||0)===0)return `<div class="empty">Aguardando votos · ${(r?.candidatos||[]).length} candidaturas carregadas.</div>`;
   const cs=orderedCandidates(r).slice(0,limit);
-  return cs.map((c,i)=>{const oi=officialInfo(c,r,cargo,i);return `<div class="leader-card">${avatar(c)}<div><div class="cand-name">${esc(c.nome)}</div><div class="cand-meta">${esc(c.numero)} · ${esc(c.partido)} · ${fmt(c.votos)} votos</div>${oi?`<span class="${oi.cls}">${esc(oi.label)}</span>`:''}</div><div class="cand-pct">${pct(c.pct)}</div></div>`}).join('')||'<div class="empty">Aguardando candidatos.</div>';
+  return cs.map((c,i)=>{const oi=officialInfo(c,r,cargo,i),fav=candidateForFavorite(c,r,cargo);return `<div class="leader-card">${avatar(c)}<div><div class="cand-name">${esc(c.nome)}</div><div class="cand-meta">${esc(c.numero)} · ${esc(c.partido)} · ${fmt(c.votos)} votos</div>${oi?`<span class="${oi.cls}">${esc(oi.label)}</span>`:''}</div><div class="leader-side">${favoriteButton(fav)}<div class="cand-pct">${pct(c.pct)}</div></div></div>`}).join('')||'<div class="empty">Aguardando candidatos.</div>';
 }
 function recordPresident(r){
   if(!(r.pctTotalizado>0))return;
@@ -139,7 +139,7 @@ async function loadAgora(force=false){
   host.innerHTML=`
     <div class="page-head"><div><div class="eyebrow">Eleições Gerais 2026</div><h1 class="page-title">Apuração em tempo real</h1><div class="page-sub">Dados oficiais do TSE, com atualização automática a cada 30 segundos.</div></div><div class="source-pill"><span class="live-dot"></span> Fonte oficial · TSE</div></div>
     <div class="hero-grid">
-      <section class="card hero-card"><div class="section-head"><div><div class="eyebrow">Presidente · Brasil</div><div class="section-title">${esc(defined)}</div></div><button class="ghost-btn" data-go="presidente">ver detalhes →</button></div>
+      <section class="card hero-card"><div class="section-head"><div><div class="eyebrow">Presidente · Brasil</div><div class="section-title">${esc(defined)}</div></div><button class="card-action" data-go="presidente">Detalhes <span>→</span></button></div>
         <div class="progress-row"><div class="progress"><span style="width:${clamp(pres.pctTotalizado)}%"></span></div><strong class="progress-pct">${pct(pres.pctTotalizado)}</strong></div>
         ${electionAlert(pres,'1')}<div class="leader-grid">${renderLeaderCards(pres,'1',2)}</div>
       </section>
@@ -150,8 +150,8 @@ async function loadAgora(force=false){
       </aside>
     </div>
     <section class="section"><div class="section-head"><div><div class="eyebrow">Mapa rápido</div><div class="section-title">Governadores por UF</div></div><div class="section-note">clique para abrir o estado</div></div><div class="uf-grid">${renderGovernorGrid(gov)}</div></section>
-    <section class="section"><div class="info-grid"><div class="card info-card"><h3>Câmara dos Deputados</h3><p>513 cadeiras. O painel Congresso mostra a distribuição nacional por partido/federação usando <strong>TSE agora</strong> e as cadeiras já atribuídas em cada UF.</p><button class="ghost-btn" data-go="congresso">abrir Congresso →</button></div><div class="card info-card"><h3>Senado Federal</h3><p>54 vagas em disputa em 2026, duas por UF. Antes da definição oficial mostramos os dois líderes; depois, somente o status de eleito informado pelo TSE.</p><button class="ghost-btn" data-go="congresso">ver Senado →</button></div></div></section>`;
-  wireGo();
+    <section class="section"><div class="info-grid"><div class="card info-card"><h3>Câmara dos Deputados</h3><p>513 cadeiras. O painel Congresso mostra a distribuição nacional por partido/federação usando <strong>TSE agora</strong> e as cadeiras já atribuídas em cada UF.</p><button class="card-action" data-go="congresso">Congresso <span>→</span></button></div><div class="card info-card"><h3>Senado Federal</h3><p>54 vagas em disputa em 2026, duas por UF. Antes da definição oficial mostramos os dois líderes; depois, somente o status de eleito informado pelo TSE.</p><button class="card-action" data-go="congresso">Senado <span>→</span></button></div></div></section>`;
+  wireGo();syncFavoriteButtons();wireFavorites(host);
 }
 function renderGovernorGrid(gov){
   if(!gov?.states)return UFS.map(([uf])=>`<button class="uf-card" data-uf="${uf}"><strong>${uf}</strong><span>abrir</span></button>`).join('');
@@ -174,7 +174,7 @@ async function loadPresident(force=false){
       <div class="card pad"><div class="eyebrow">Votos</div><div class="section-title">Composição</div>${donut(r)}<div class="stats-grid"><div class="stat-box"><span>Eleitorado</span><strong>${fmt(r.eleitorado)}</strong></div><div class="stat-box"><span>Comparecimento</span><strong>${fmt(r.comparecimento)}</strong></div><div class="stat-box"><span>Abstenção</span><strong>${fmt(r.abstencao)}</strong></div><div class="stat-box"><span>Válidos</span><strong>${fmt(r.validos)}</strong></div></div></div>
       <div class="card pad"><div class="eyebrow">Evolução local</div><div class="section-title">Percentuais ao longo das atualizações</div><div style="margin-top:9px">${evolution()}</div></div>
     </aside>
-  </div>`;
+  </div>`;syncFavoriteButtons();wireFavorites(host);
 }
 function buildStateToolbar(){
   const opts=UFS.map(([u,n])=>`<option value="${u}" ${u===S.uf?'selected':''}>${n} (${u})</option>`).join('');
@@ -188,7 +188,7 @@ async function loadState(force=false){
   const cargo=S.uf==='DF'&&S.cargo==='7'?'8':S.uf!=='DF'&&S.cargo==='8'?'7':S.cargo;S.cargo=cargo;
   const r=await fetchResult(cargo,S.uf,force);
   host.innerHTML=`<div class="page-head"><div><div class="eyebrow">${esc(UF_NAME[S.uf])}</div><h1 class="page-title">${esc(CARGO[cargo])}</h1><div class="page-sub">${S.uf} · ${pct(r.pctTotalizado)} das seções totalizadas</div></div><div class="source-pill">TSE · ${esc(r.meta.dataGeracao||'')} ${esc(r.meta.horaGeracao||'')}</div></div>${buildStateToolbar()}${cargo==='3'||cargo==='5'?renderMajorState(r,cargo):renderProportional(r,cargo)}`;
-  wireStateControls();
+  wireStateControls();syncFavoriteButtons();wireFavorites(host);
 }
 function wireStateControls(){
   const sel=$('#ufSelect');if(sel)sel.onchange=()=>{S.uf=sel.value;if(S.uf==='DF'&&S.cargo==='7')S.cargo='8';if(S.uf!=='DF'&&S.cargo==='8')S.cargo='7';loadState(true)};
@@ -284,6 +284,18 @@ function isFavorite(c){
   const key=favoriteKey(c);
   return getFavorites().some(x=>favoriteKey(x)===key);
 }
+function candidateForFavorite(c,r,cargo){
+  return {
+    ...c,
+    sqcand:c.sqcand||c.id||'',
+    cargoCodigo:String(cargo||c.cargoCodigo||''),
+    cargo:c.cargo||CARGO[String(cargo)]||String(cargo||'Candidato'),
+    uf:c.uf||r?.abrangencia||(String(cargo)==='1'?'BR':''),
+    percentual:c.percentual??c.pct??0,
+    status:c.status||c.st||c.situacaoOficial||'',
+    foto:c.foto||c.fotoUrl||''
+  };
+}
 function favoriteButton(c){
   const key=registerCandidate(c),on=isFavorite(c);
   return `<button class="favorite-btn ${on?'active':''}" data-favorite-key="${encodeURIComponent(key)}" aria-label="${on?'Remover dos favoritos':'Adicionar aos favoritos'}" title="${on?'Remover dos favoritos':'Favoritar'}">${on?'★':'☆'}</button>`;
@@ -337,6 +349,7 @@ function toggleFavorite(key){
   if(navigator.vibrate)navigator.vibrate(25);
   renderFavorites();
   syncFavoriteButtons();
+  if(S.view==='favoritos')loadFavoritesView();
 }
 function wireFavorites(root=document){
   root.querySelectorAll('[data-favorite-key]').forEach(btn=>{
@@ -354,7 +367,6 @@ function searchUI(){
   <div class="card search-card">
     <div class="search-controls"><input id="searchInput" class="search-input" placeholder="Ex.: Ana Paula Siqueira, 13444, PT" autocomplete="off"><select id="searchUF" class="search-select">${ufOpts}</select><select id="searchCargo" class="search-select"><option value="">Todos os cargos</option><option value="1">Presidente</option><option value="3">Governador</option><option value="5">Senador</option><option value="6">Dep. Federal</option><option value="7">Dep. Estadual</option><option value="8">Dep. Distrital</option></select><button id="searchBtn" class="primary-btn">Buscar</button></div>
     <div class="search-meta" id="searchMeta">UF padrão: Minas Gerais. Escolha “Brasil inteiro” para varrer todas as UFs.</div>
-    <section id="favoritesSection" class="favorites-section hidden"><div class="favorites-head"><div><span class="eyebrow">Acompanhamento rápido</span><strong>Meus favoritos <span id="favoriteCount" class="favorite-count">0</span></strong></div><span class="section-note">salvos neste aparelho</span></div><div id="favoriteList" class="search-results favorite-list"></div></section>
     <div id="searchResults" class="search-results"></div>
   </div>`;
 }
@@ -364,7 +376,6 @@ function initSearch(){
   const btn=$('#searchBtn'),input=$('#searchInput');
   btn.onclick=doSearch;
   input.onkeydown=e=>{if(e.key==='Enter')doSearch()};
-  renderFavorites();
 }
 async function doSearch(){
   const q=$('#searchInput').value.trim(),uf=$('#searchUF').value,cargo=$('#searchCargo').value;
@@ -381,7 +392,6 @@ async function doSearch(){
     $('#searchMeta').textContent=`${j.count||0} resultado(s) · ${j.scanned||0} arquivo(s) oficiais consultados`;
     $('#searchResults').innerHTML=results.map(c=>searchResultCard(c)).join('')||'<div class="empty">Nenhum candidato encontrado nos arquivos consultados.</div>';
     wireFavorites($('#searchResults'));
-    renderFavorites();
     syncFavoriteButtons();
   }catch(e){
     $('#searchMeta').textContent='Falha temporária ao consultar o TSE.';
@@ -389,6 +399,37 @@ async function doSearch(){
   }finally{
     btn.disabled=false;btn.textContent='Buscar';
   }
+}
+
+
+function loadFavoritesView(){
+  const host=$('#favoritesContent');
+  if(!host)return;
+  const favs=getFavorites();
+  favs.forEach(registerCandidate);
+  if(!favs.length){
+    host.innerHTML=`<div class="page-head"><div><div class="eyebrow">Acompanhamento pessoal</div><h1 class="page-title">Favoritos</h1><div class="page-sub">Todos os candidatos que você marcar com ★ ficam aqui.</div></div></div>
+    <div class="card pad favorites-empty"><div class="favorites-empty-icon">☆</div><h3>Nenhum favorito ainda</h3><p>Abra Buscar, Presidente ou Estados e toque na estrela de qualquer candidato. Vale para todos os cargos.</p><button class="primary-btn" data-go="buscar">Buscar candidatos</button></div>`;
+    wireGo();
+    return;
+  }
+  const order=['Presidente','Governador','Senador','Deputado Federal','Deputado Estadual','Deputado Distrital'];
+  const groups=new Map();
+  for(const c of favs){
+    const name=c.cargo||CARGO[String(c.cargoCodigo)]||'Outros';
+    if(!groups.has(name))groups.set(name,[]);
+    groups.get(name).push(c);
+  }
+  const names=[...groups.keys()].sort((x,y)=>{
+    const ix=order.indexOf(x),iy=order.indexOf(y);
+    return (ix<0?99:ix)-(iy<0?99:iy)||x.localeCompare(y,'pt-BR');
+  });
+  host.innerHTML=`<div class="page-head"><div><div class="eyebrow">Acompanhamento pessoal</div><h1 class="page-title">Favoritos</h1><div class="page-sub">${favs.length} candidato(s) salvo(s) neste aparelho, de qualquer cargo.</div></div><div class="favorites-total">★ ${favs.length}</div></div>
+  <div class="favorites-groups">${names.map(name=>{
+    const list=groups.get(name)||[];
+    return `<section class="card favorites-group"><div class="favorites-group-head"><div><div class="eyebrow">${esc(name)}</div><div class="section-title">${list.length} favorito(s)</div></div></div><div class="search-results favorite-list">${list.map(c=>searchResultCard(c,{favoriteContext:true})).join('')}</div></section>`;
+  }).join('')}</div>`;
+  wireFavorites(host);
 }
 
 function loadHow(){
@@ -405,8 +446,9 @@ async function loadView(view,force=false){
     else if(view==='estados')await loadState(force);
     else if(view==='congresso')await loadCongress(force);
     else if(view==='buscar')initSearch();
+    else if(view==='favoritos')loadFavoritesView();
     else if(view==='como')loadHow();
-  }catch(e){const id=view==='presidente'?'presidentContent':view==='estados'?'stateContent':view==='congresso'?'congressContent':view==='buscar'?'searchContent':view==='como'?'howContent':'agoraContent';$('#'+id).innerHTML=`<div class="card pad"><div class="alert danger">Não foi possível carregar esta tela agora. ${esc(e.message||'')} <button class="ghost-btn" id="retryBtn">tentar novamente</button></div></div>`;$('#retryBtn')?.addEventListener('click',()=>loadView(view,true))}
+  }catch(e){const id=view==='presidente'?'presidentContent':view==='estados'?'stateContent':view==='congresso'?'congressContent':view==='buscar'?'searchContent':view==='favoritos'?'favoritesContent':view==='como'?'howContent':'agoraContent';$('#'+id).innerHTML=`<div class="card pad"><div class="alert danger">Não foi possível carregar esta tela agora. ${esc(e.message||'')} <button class="ghost-btn" id="retryBtn">tentar novamente</button></div></div>`;$('#retryBtn')?.addEventListener('click',()=>loadView(view,true))}
 }
 function showView(view){
   S.view=view;$$('.view').forEach(v=>v.classList.toggle('active',v.id==='view-'+view));$$('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));window.scrollTo(0,0);loadView(view,false);restartPoll();
