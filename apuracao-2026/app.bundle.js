@@ -1,4 +1,4 @@
-/* Apuracao 2026 browser bundle v4.5 */
+/* Apuracao 2026 browser bundle v4.6 */
 function tseInt(v){return Number(String(v??'0').replace(/\./g,'').replace(',','.'))||0}
 function tsePct(v){return Number(String(v??'0').replace(',','.'))||0}
 function roundQE(vv,seats){if(seats<=0)return 0;const raw=vv/seats,f=Math.floor(raw);return raw-f>0.5?f+1:f}
@@ -279,7 +279,7 @@ async function loadState(force=false){
   const cargo=S.uf==='DF'&&S.cargo==='7'?'8':S.uf!=='DF'&&S.cargo==='8'?'7':S.cargo;S.cargo=cargo;
   const r=await fetchResult(cargo,S.uf,force);
   host.innerHTML=`<div class="page-head"><div><div class="eyebrow">${esc(UF_NAME[S.uf])}</div><h1 class="page-title">${esc(CARGO[cargo])}</h1><div class="page-sub">${S.uf} · ${pct(r.pctTotalizado)} das seções totalizadas</div></div><div class="source-pill">TSE · ${esc(r.meta.dataGeracao||'')} ${esc(r.meta.horaGeracao||'')}</div></div>${buildStateToolbar()}${cargo==='3'||cargo==='5'?renderMajorState(r,cargo):renderProportional(r,cargo)}`;
-  wireStateControls();syncFavoriteButtons();wireFavorites(host);
+  wireStateControls();wireProportionalCandidateRanking(host);syncFavoriteButtons();wireFavorites(host);
 }
 function wireStateControls(){
   const sel=$('#ufSelect');if(sel)sel.onchange=()=>{S.uf=sel.value;if(S.uf==='DF'&&S.cargo==='7')S.cargo='8';if(S.uf!=='DF'&&S.cargo==='8')S.cargo='7';loadState(true)};
@@ -296,6 +296,31 @@ function officialSeatBar(r){
   if(!rows.length)return '<div class="empty">O TSE ainda não atribuiu cadeiras.</div>';
   return `<div class="seat-bar">${rows.map(x=>`<span title="${esc(x.sigla)} · ${x.seats}" style="width:${x.seats/total*100}%;background:${hashColor(x.sigla)}"></span>`).join('')}</div><div class="seat-legend">${rows.slice(0,10).map(x=>`<span><i class="legend-dot" style="display:inline-block;background:${hashColor(x.sigla)}"></i> ${esc(x.sigla)} ${x.seats}</span>`).join('')}</div>`;
 }
+function renderProportionalCandidateRanking(r,cargo){
+  const list=orderedCandidates(r);
+  const first=list.slice(0,80),rest=list.slice(80);
+  const rows=first.map((c,i)=>candidateRow(c,r,cargo,i)).join('');
+  const extra=rest.length?`<div class="candidate-list prop-candidate-more hidden">${rest.map((c,i)=>candidateRow(c,r,cargo,i+80)).join('')}</div>
+    <button class="modern-link-btn prop-show-all" data-show-prop-all type="button">Mostrar todos os ${fmt(list.length)} candidatos <span>↓</span></button>`:'';
+  return `<section class="card pad section prop-candidates-card">
+    <div class="section-head"><div><div class="eyebrow">Votação nominal</div><div class="section-title">Candidatos e votos</div></div><div class="section-note">${fmt(list.length)} candidaturas · ordem atual do TSE</div></div>
+    <div class="prop-candidate-note">Cada linha mostra <strong>votos nominais</strong>, percentual, partido e situação oficial quando o TSE já tiver atribuído.</div>
+    <div class="candidate-list">${rows||'<div class="empty">Nenhuma candidatura disponível neste arquivo.</div>'}</div>
+    ${extra}
+  </section>`;
+}
+function wireProportionalCandidateRanking(host){
+  const btn=host?.querySelector('[data-show-prop-all]');
+  if(!btn)return;
+  btn.onclick=()=>{
+    const more=host.querySelector('.prop-candidate-more');
+    if(!more)return;
+    const hidden=more.classList.toggle('hidden');
+    btn.innerHTML=hidden?'Mostrar todos os candidatos <span>↓</span>':'Mostrar menos <span>↑</span>';
+    if(!hidden)wireFavorites(more);
+  };
+}
+
 function renderProportional(r,cargo){
   const calc=calcularProporcional(r),calcBy=new Map(calc.partidos.map(x=>[x.id,x])),officialElected=r.candidatos.filter(c=>c.eleitoTse||(/Eleito/i.test(c.situacaoOficial)&&!/Não eleito/i.test(c.situacaoOficial)));
   const rows=r.partidos.map(g=>{const c=calcBy.get(g.id);return{...g,app:c?.total||0,qp:c?.qp||0,sobra:c?.vagasSobra||0,pctQE:c?.pctQE||0}}).sort((a,b)=>(b.vagasOficiais||0)-(a.vagasOficiais||0)||b.app-a.app||b.votosValidos-a.votosValidos);
@@ -319,6 +344,7 @@ function renderProportional(r,cargo){
       <div class="card pad"><div class="eyebrow">Sobras</div><div class="section-title">Rodadas por maiores médias</div><div class="round-list">${calc.rodadas.length?calc.rodadas.slice(0,12).map(x=>`<div class="round"><div class="round-head"><span>Rodada ${x.rodada} · ${esc(x.fase)}</span><span>${x.empateIndefinido?'empate':''}</span></div><div class="round-winner">${x.vencedorSigla?esc(x.vencedorSigla)+' · '+esc(x.candidatoNome||''):'sem cadeira atribuída'}</div></div>`).join(''):'<div class="empty">As rodadas aparecerão quando houver votos válidos.</div>'}</div></div>
     </aside>
   </div>
+  ${renderProportionalCandidateRanking(r,cargo)}
   <div class="two-col section" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
     <section class="card pad"><div class="section-head"><div><div class="eyebrow">Situação oficial TSE</div><div class="section-title">Eleitos e suplentes</div></div><div class="section-note">${officialElected.length} eleito(s) oficial(is)</div></div><div class="candidate-list">${r.candidatos.filter(c=>c.situacaoOficial||c.eleitoTse).slice(0,80).map((c,i)=>candidateRow(c,r,cargo,i)).join('')||'<div class="empty">O TSE ainda não atribuiu situação final aos candidatos.</div>'}</div></section>
     <section class="card pad"><div class="section-head"><div><div class="eyebrow">Projeção auditável</div><div class="section-title">Eleitos pelo cálculo atual</div></div><div class="section-note">${calc.eleitos.length} identidade(s) calculada(s)</div></div><div class="candidate-list">${calc.eleitos.slice(0,80).map((e,i)=>candidateRow(e.candidato,r,cargo,i)).join('')||'<div class="empty">Sem projeção enquanto não houver votos suficientes.</div>'}</div></section>
