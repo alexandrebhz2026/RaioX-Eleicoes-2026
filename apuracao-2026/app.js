@@ -317,15 +317,92 @@ function searchResultCard(c,{favoriteContext=false}={}){
     <div class="result-actions">${favoriteButton(c)}<div class="right-stat"><strong>${pct(c.percentual??c.pct)}</strong></div></div>
   </div>`;
 }
+function updateFavoriteBadges(){
+  const n=getFavorites().length;
+  $$('[data-fav-badge]').forEach(el=>{el.textContent=String(n);el.classList.toggle('hidden',n===0)});
+}
 function renderFavorites(){
-  const section=$('#favoritesSection'),list=$('#favoriteList'),count=$('#favoriteCount');
-  if(!section||!list)return;
+  updateFavoriteBadges();
+}
+function favoriteCargoCode(c){
+  if(c.cargoCodigo)return String(c.cargoCodigo);
+  const label=String(c.cargo||'').toLowerCase();
+  if(label.includes('presidente'))return '1';
+  if(label.includes('governador'))return '3';
+  if(label.includes('senador'))return '5';
+  if(label.includes('federal'))return '6';
+  if(label.includes('distrital'))return '8';
+  if(label.includes('estadual'))return '7';
+  return '';
+}
+function favoritePageCard(c){
+  registerCandidate(c);
+  const status=c.status||c.st||c.situacaoOficial||'';
+  return `<div class="favorite-page-card">
+    ${avatar(c)}
+    <div class="favorite-main"><div class="result-context">${esc(c.cargo||CARGO[favoriteCargoCode(c)]||'Candidato')} · ${esc(c.uf||'')}</div>
+      <div class="cand-name">${esc(c.nome)}</div>
+      <div class="cand-meta">${esc(c.numero)} · ${esc(c.partido)} · ${fmt(c.votos)} votos</div>
+      ${status?`<span class="${/Não eleito|Suplente/i.test(status)?'supp-badge':'official-badge'}">${esc(status)} · TSE</span>`:''}
+    </div>
+    <div class="favorite-side">${favoriteButton(c)}<strong>${pct(c.percentual??c.pct)}</strong></div>
+  </div>`;
+}
+function renderFavoritesPage(){
+  const host=$('#favoritesContent');if(!host)return;
   const favs=getFavorites();
   favs.forEach(registerCandidate);
-  section.classList.toggle('hidden',favs.length===0);
-  if(count)count.textContent=String(favs.length);
-  list.innerHTML=favs.map(c=>searchResultCard(c,{favoriteContext:true})).join('');
-  wireFavorites(list);
+  updateFavoriteBadges();
+  if(!favs.length){
+    host.innerHTML=`<div class="page-head"><div><div class="eyebrow">Acompanhamento</div><h1 class="page-title">Favoritos</h1><div class="page-sub">Seus candidatos favoritos, de qualquer cargo, ficam reunidos aqui.</div></div></div>
+      <div class="card pad favorite-empty"><div class="favorite-empty-star">☆</div><h3>Nenhum favorito ainda</h3><p>Vá em Buscar ou abra um cargo e toque na estrela do candidato.</p><button class="modern-link-btn" data-go="buscar">Buscar candidatos <span>→</span></button></div>`;
+    wireGo();return;
+  }
+  const order=['1','3','5','6','7','8'];
+  const groups=new Map();
+  for(const c of favs){const code=favoriteCargoCode(c)||'outro';if(!groups.has(code))groups.set(code,[]);groups.get(code).push(c)}
+  const codes=[...order.filter(x=>groups.has(x)),...([...groups.keys()].filter(x=>!order.includes(x)))];
+  host.innerHTML=`<div class="page-head"><div><div class="eyebrow">Acompanhamento</div><h1 class="page-title">Favoritos</h1><div class="page-sub">${favs.length} candidato(s) salvo(s) neste aparelho · atualizados com dados do TSE.</div></div><div class="favorite-total">★ ${favs.length}</div></div>
+    <div class="favorite-groups">${codes.map(code=>{
+      const items=groups.get(code).slice().sort((x,y)=>String(x.uf||'').localeCompare(String(y.uf||''),'pt-BR')||String(x.nome||'').localeCompare(String(y.nome||''),'pt-BR'));
+      return `<section class="card favorite-group"><div class="favorite-group-head"><div><span class="eyebrow">${esc(CARGO[code]||'Candidatos')}</span><strong>${items.length} favorito(s)</strong></div></div><div class="favorite-page-list">${items.map(favoritePageCard).join('')}</div></section>`;
+    }).join('')}</div>`;
+  wireFavorites(host);
+}
+async function refreshFavorites(force=false){
+  const favs=getFavorites();if(!favs.length){renderFavoritesPage();return}
+  const groups=new Map();
+  for(const f of favs){
+    const cargo=favoriteCargoCode(f);if(!cargo)continue;
+    const uf=cargo==='1'?'BR':String(f.uf||'').toUpperCase();if(!uf)continue;
+    const k=cargo+':'+uf;if(!groups.has(k))groups.set(k,{cargo,uf,items:[]});groups.get(k).items.push(f);
+  }
+  const entries=[...groups.values()];
+  const updated=new Map(favs.map(x=>[favoriteKey(x),x]));
+  for(let i=0;i<entries.length;i+=4){
+    const batch=entries.slice(i,i+4);
+    const docs=await Promise.all(batch.map(async g=>{try{return{g,r:await fetchResult(g.cargo,g.uf,force)}}catch{return{g,r:null}}}));
+    for(const {g,r} of docs){
+      if(!r)continue;
+      for(const old of g.items){
+        const id=String(old.sqcand||old.id||''),num=String(old.numero||'');
+        const c=r.candidatos.find(x=>String(x.id||x.sqcand||'')===id)||(num?r.candidatos.find(x=>String(x.numero||'')===num):null);
+        if(c){
+          const fresh=candidateForFavorite(c,r,g.cargo);
+          const oldKey=favoriteKey(old);
+          updated.delete(oldKey);
+          updated.set(favoriteKey(fresh),fresh);
+        }
+      }
+    }
+  }
+  saveFavorites([...updated.values()]);
+  renderFavoritesPage();
+  syncFavoriteButtons();
+}
+async function loadFavorites(force=false){
+  renderFavoritesPage();
+  await refreshFavorites(force);
 }
 function syncFavoriteButtons(){
   $('[data-favorite-key]').forEach(btn=>{
@@ -445,6 +522,7 @@ async function loadView(view,force=false){
     else if(view==='presidente')await loadPresident(force);
     else if(view==='estados')await loadState(force);
     else if(view==='congresso')await loadCongress(force);
+    else if(view==='favoritos')await loadFavorites(force);
     else if(view==='buscar')initSearch();
     else if(view==='favoritos')loadFavoritesView();
     else if(view==='como')loadHow();
@@ -456,13 +534,13 @@ function showView(view){
 function wireGo(){
   $$('[data-go]').forEach(b=>b.onclick=()=>showView(b.dataset.go));$$('[data-uf]').forEach(b=>b.onclick=()=>{S.uf=b.dataset.uf;S.cargo='3';showView('estados')});
 }
-function restartPoll(){clearInterval(S.poll);if(['agora','presidente','estados','congresso'].includes(S.view))S.poll=setInterval(()=>{if(document.visibilityState==='visible')loadView(S.view,true)},30000)}
+function restartPoll(){clearInterval(S.poll);if(['agora','presidente','estados','congresso','favoritos'].includes(S.view))S.poll=setInterval(()=>{if(document.visibilityState==='visible')loadView(S.view,true)},30000)}
 function setTheme(t){document.documentElement.dataset.theme=t;localStorage.setItem('ap26-theme',t);$('#themeBtn').textContent=t==='dark'?'☀':'☾'}
 function initTheme(){const t=localStorage.getItem('ap26-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');setTheme(t)}
 async function boot(){
   initTheme();$('#themeBtn').onclick=()=>setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');$('#refreshBtn').onclick=()=>loadView(S.view,true);
   $$('[data-view]').forEach(b=>b.onclick=()=>showView(b.dataset.view));$('.brand').onclick=()=>showView('agora');
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')loadView(S.view,true)});
-  await discoverCodes();showView('agora');
+  await discoverCodes();updateFavoriteBadges();showView('agora');
 }
 boot();
