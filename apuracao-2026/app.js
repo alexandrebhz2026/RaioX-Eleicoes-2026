@@ -112,6 +112,72 @@ function sectionsBadge(r,compact=false){
   if(!s.total)return '<span class="apuration-count">Aguardando contagem de seções</span>';
   return `<div class="apuration-count ${compact?'compact':''}"><strong>${fmt(s.done)}</strong><span> de ${fmt(s.total)} seções/urnas</span><b>${pct(s.pct)}</b></div>`;
 }
+const LIVE_EVENTS_KEY='ap26-live-events-v1';
+const LIVE_STATE_KEY='ap26-live-state-v1';
+function readJsonLocal(key,fallback){try{const v=JSON.parse(localStorage.getItem(key)||'null');return v??fallback}catch{return fallback}}
+function pushLiveEvent(type,text,meta={}){
+  const events=readJsonLocal(LIVE_EVENTS_KEY,[]);
+  const sig=type+'|'+text;
+  if(events[0]?.sig===sig&&Date.now()-(events[0]?.at||0)<30000)return;
+  events.unshift({id:String(Date.now())+'-'+Math.random().toString(36).slice(2,7),sig,type,text,at:Date.now(),meta});
+  localStorage.setItem(LIVE_EVENTS_KEY,JSON.stringify(events.slice(0,80)));
+}
+function recordMajorEvents(pres,gov){
+  const prev=readJsonLocal(LIVE_STATE_KEY,{});
+  const next={};
+  if(pres){
+    const top=(pres.candidatos||[])[0];
+    next.presLeader=top?.id||'';
+    next.presLeaderName=top?.nome||'';
+    next.presMd=pres.meta?.md||'n';
+    if(prev.presLeader&&next.presLeader&&prev.presLeader!==next.presLeader)pushLiveEvent('lead',`Mudança na liderança presidencial: ${next.presLeaderName} assumiu a 1ª posição.`,{cargo:'1'});
+    if(prev.presMd&&prev.presMd!=='e'&&next.presMd==='e')pushLiveEvent('official','Presidência matematicamente definida pelo TSE.',{cargo:'1'});
+    if(prev.presMd&&prev.presMd!=='s'&&next.presMd==='s')pushLiveEvent('runoff','TSE definiu segundo turno para Presidente.',{cargo:'1'});
+  }
+  next.gov={};
+  for(const x of gov?.states||[]){
+    const s=governorVisualState(x),tone=s.elected?'elected':s.runoff?'runoff':'counting';
+    next.gov[x.uf]={tone,leader:s.candidate?.id||s.candidate?.nome||'',name:s.candidate?.nome||''};
+    const old=prev.gov?.[x.uf];
+    if(old&&old.tone!==tone){
+      if(tone==='elected')pushLiveEvent('official',`${x.uf}: ${s.candidate?.nome||'governador'} passou a ELEITO TSE.`,{uf:x.uf,cargo:'3'});
+      if(tone==='runoff')pushLiveEvent('runoff',`${x.uf}: eleição para governador foi definida para 2º turno.`,{uf:x.uf,cargo:'3'});
+    }else if(old&&tone==='counting'&&old.leader&&next.gov[x.uf].leader&&old.leader!==next.gov[x.uf].leader){
+      pushLiveEvent('lead',`${x.uf}: ${s.candidate?.nome||'novo candidato'} assumiu a liderança para governador.`,{uf:x.uf,cargo:'3'});
+    }
+  }
+  localStorage.setItem(LIVE_STATE_KEY,JSON.stringify(next));
+}
+function recordDeputyProjectionEvents(r,cargo,calc){
+  if(!r||!calc||!['6','7','8'].includes(String(cargo)))return;
+  const key=`ap26-proj-${cargo}-${r.abrangencia}`;
+  const prev=readJsonLocal(key,{ids:[]});
+  const nowIds=(calc.eleitos||[]).map(e=>String(e.candidato?.id||'')).filter(Boolean);
+  const prevSet=new Set(prev.ids||[]),nowSet=new Set(nowIds);
+  for(const e of calc.eleitos||[])if(!prevSet.has(String(e.candidato?.id||''))&&(prev.ids||[]).length){
+    pushLiveEvent('projection',`${r.abrangencia}: ${e.candidato.nome} entrou nas vagas projetadas de ${CARGO[String(cargo)]}.`,{uf:r.abrangencia,cargo:String(cargo)});
+  }
+  for(const id of prev.ids||[])if(!nowSet.has(String(id))){
+    const old=prev.items?.[id];if(old)pushLiveEvent('projection-out',`${r.abrangencia}: ${old.nome} saiu das vagas projetadas de ${CARGO[String(cargo)]}.`,{uf:r.abrangencia,cargo:String(cargo)});
+  }
+  const items=Object.fromEntries((calc.eleitos||[]).map(e=>[String(e.candidato.id),{nome:e.candidato.nome}]));
+  localStorage.setItem(key,JSON.stringify({ids:nowIds,items,at:Date.now()}));
+}
+function liveEventsPanel(){
+  const cutoff=Date.now()-5*60*1000;
+  const events=readJsonLocal(LIVE_EVENTS_KEY,[]).filter(e=>(e.at||0)>=cutoff);
+  const icon=t=>t==='official'?'✓':t==='runoff'?'↔':t==='lead'?'↑':t==='projection'?'＋':'−';
+  return `<section class="section live-events-section"><div class="section-head"><div><div class="eyebrow">Últimos 5 minutos</div><div class="section-title">O que mudou</div></div><div class="section-note">${events.length?events.length+' mudança(s) detectada(s)':'sem mudanças relevantes'}</div></div>
+    <div class="card live-events-card">${events.length?events.slice(0,10).map(e=>`<button class="live-event-row" data-event-uf="${esc(e.meta?.uf||'')}" data-event-cargo="${esc(e.meta?.cargo||'')}"><i class="live-event-icon ${esc(e.type)}">${icon(e.type)}</i><span><strong>${esc(e.text)}</strong><small>${new Date(e.at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</small></span><b>›</b></button>`).join(''):'<div class="empty">Quando houver mudança de liderança, definição oficial ou entrada/saída de uma vaga projetada, ela aparecerá aqui.</div>'}</div>
+  </section>`;
+}
+function wireLiveEvents(){
+  $('[data-event-uf]').forEach(b=>b.onclick=()=>{
+    const uf=b.dataset.eventUf,cargo=b.dataset.eventCargo;
+    if(uf){S.uf=uf;S.cargo=cargo||'3';showView('estados')}
+    else if(cargo==='1')showView('presidente');
+  });
+}
 function updateLive(){
   const el=$('#liveTime'); if(!el)return;
   const t=S.lastRefresh?new Date(S.lastRefresh).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):'conectando';
@@ -206,7 +272,7 @@ async function loadAgora(force=false){
     fetchResult('1','BR',force),
     API_BASE?governorSummaryClient(force):fetch('/api/summary'+(force?'?t='+Date.now():'')).then(r=>r.ok?r.json():null).catch(()=>null)
   ]);
-  S.governors=gov;recordPresident(pres);
+  S.governors=gov;recordPresident(pres);recordMajorEvents(pres,gov);
   const official=officialSelected(pres,'1');
   const defined=pres.meta.md==='e'?'Eleito definido':pres.meta.md==='s'?'2º turno definido':pres.meta.tf==='s'?'Final':'Em apuração';
   const govDefined=(gov?.states||[]).filter(x=>x.md==='e'||x.md==='s'||x.tf==='s').length;
@@ -225,8 +291,9 @@ async function loadAgora(force=false){
       </aside>
     </div>
     <section class="section"><div class="section-head"><div><div class="eyebrow">Mapa rápido</div><div class="section-title">Governadores por UF</div></div><div class="section-note">toque no estado · abre Senado</div></div>${governorMapPanel(gov)}</section>
+    ${liveEventsPanel()}
     <section class="section"><div class="info-grid"><div class="card info-card"><h3>Câmara dos Deputados</h3><p>513 cadeiras. O painel Congresso mostra a distribuição nacional por partido/federação usando <strong>TSE agora</strong> e as cadeiras já atribuídas em cada UF.</p><button class="card-action" data-go="congresso">Congresso <span>→</span></button></div><div class="card info-card"><h3>Senado Federal</h3><p>54 vagas em disputa em 2026, duas por UF. Antes da definição oficial mostramos os dois líderes; depois, somente o status de eleito informado pelo TSE.</p><button class="card-action" data-go="congresso">Senado <span>→</span></button></div></div></section>`;
-  wireGo();syncFavoriteButtons();wireFavorites(host);mountGovernorBrazilMap(gov);
+  wireGo();wireLiveEvents();syncFavoriteButtons();wireFavorites(host);mountGovernorBrazilMap(gov);
 }
 function governorVisualState(x){
   const officials=x?.official||[];
@@ -269,27 +336,102 @@ function governorMapPanel(gov){
       <span><i class="map-legend-dot runoff"></i><b>2º turno TSE</b><small>disputa definida para o segundo turno</small></span>
       <span><i class="map-legend-dot counting"></i><b>Em apuração</b><small>ainda sem definição oficial</small></span>
     </div>
-    <div id="governorMapFocus" class="governor-map-focus"><strong>Toque em um estado</strong><span>abre direto o Senado da UF · no computador, passe o mouse para ver líder e seções</span></div>
+    <div id="governorMapFocus" class="governor-map-focus"><strong>Toque em um estado</strong><span>abre um resumo da UF com Governador, Senado e Deputados</span></div>
   </div>`;
 }
 function governorMapFocusText(x){
-  if(!x)return '<strong>Toque em um estado</strong><span>abre direto o Senado da UF</span>';
+  if(!x)return '<strong>Toque em um estado</strong><span>abre um resumo da UF</span>';
   const state=governorVisualState(x);
   const status=state.elected?'Eleito TSE':state.runoff?'2º turno TSE':'Em apuração';
   const name=state.candidate?.nome||'Aguardando candidato';
   return `<strong>${esc(x.uf)} · ${esc(name)}</strong><span>${esc(status)} · ${fmt(x.secoesTotalizadas||0)} de ${fmt(x.secoesTotal||0)} seções · ${pct(x.pct||0)}</span>`;
+}
+function ensureStateQuickModal(){
+  let modal=$('#stateQuickModal');if(modal)return modal;
+  modal=document.createElement('div');modal.id='stateQuickModal';modal.className='state-quick-modal hidden';
+  modal.innerHTML='<div class="state-quick-backdrop" data-close-state-quick></div><div class="state-quick-sheet"><button class="state-quick-close" data-close-state-quick aria-label="Fechar">×</button><div id="stateQuickBody"></div></div>';
+  document.body.appendChild(modal);
+  modal.querySelectorAll('[data-close-state-quick]').forEach(x=>x.onclick=()=>modal.classList.add('hidden'));
+  return modal;
+}
+function stateQuickCandidate(c,label=''){
+  if(!c)return '<div class="quick-empty">aguardando dados</div>';
+  return `<div class="quick-candidate">${avatar(c)}<div><small>${esc(label)}</small><strong>${esc(c.nome)}</strong><span>${esc(c.numero||'')} · ${esc(c.partido||'')} · ${fmt(c.votos||0)} votos · ${pct(c.pct||0)}</span></div></div>`;
+}
+function openStateCargo(uf,cargo){
+  const modal=$('#stateQuickModal');if(modal)modal.classList.add('hidden');
+  S.uf=uf;S.cargo=cargo;showView('estados');
+}
+async function createStateShareImage(data){
+  const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1350;const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#F7F5FB';ctx.fillRect(0,0,1080,1350);
+  ctx.fillStyle='#7C3AED';ctx.fillRect(0,0,1080,150);
+  ctx.fillStyle='#fff';ctx.font='900 52px system-ui';ctx.fillText('Apuração 2026',70,95);
+  ctx.fillStyle='#17171D';ctx.font='900 82px system-ui';ctx.fillText(data.uf,70,270);
+  ctx.font='700 30px system-ui';ctx.fillStyle='#6B7280';ctx.fillText(`${pct(data.pct)} das seções totalizadas`,70,320);
+  const blocks=[
+    ['GOVERNADOR',data.govText],
+    ['SENADO',data.senText],
+    ['DEP. FEDERAL',data.fedText],
+    [data.uf==='DF'?'DEP. DISTRITAL':'DEP. ESTADUAL',data.estText]
+  ];
+  let y=390;
+  for(const [title,body] of blocks){
+    ctx.fillStyle='#fff';ctx.strokeStyle='#E5E7EB';ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(55,y,970,190,26);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#7C3AED';ctx.font='900 24px system-ui';ctx.fillText(title,90,y+48);
+    ctx.fillStyle='#17171D';ctx.font='800 31px system-ui';
+    const words=String(body||'Aguardando dados').split(' ');let line='',ly=y+98;
+    for(const w of words){const test=line+w+' ';if(ctx.measureText(test).width>860){ctx.fillText(line,90,ly);line=w+' ';ly+=42}else line=test}
+    if(line)ctx.fillText(line,90,ly);y+=215;
+  }
+  ctx.fillStyle='#6B7280';ctx.font='600 22px system-ui';ctx.fillText('Fonte: TSE · projeções do app identificadas separadamente',70,1290);
+  return await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+}
+async function shareStateQuick(data){
+  const blob=await createStateShareImage(data);if(!blob)return;
+  const file=new File([blob],`apuracao-2026-${data.uf}.png`,{type:'image/png'});
+  if(navigator.share&&navigator.canShare?.({files:[file]})){try{await navigator.share({title:`Apuração 2026 · ${data.uf}`,files:[file]});return}catch{}}
+  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+async function openStateQuickSummary(uf){
+  uf=String(uf||'').toUpperCase();if(!uf)return;
+  const modal=ensureStateQuickModal(),body=$('#stateQuickBody');modal.classList.remove('hidden');
+  const gx=(S.governors?.states||[]).find(x=>x.uf===uf),gv=governorVisualState(gx);
+  body.innerHTML=`<div class="quick-head"><div><span class="eyebrow">Resumo da UF</span><h2>${esc(UF_NAME[uf]||uf)} · ${uf}</h2><p>${fmt(gx?.secoesTotalizadas||0)} de ${fmt(gx?.secoesTotal||0)} seções · ${pct(gx?.pct||0)}</p></div></div>
+    <div class="quick-loading">Carregando Senado e Deputados…</div>`;
+  const [sen,fed,est]=await Promise.all([
+    fetchResult('5',uf,false).catch(()=>null),
+    fetchResult('6',uf,false).catch(()=>null),
+    fetchResult(uf==='DF'?'8':'7',uf,false).catch(()=>null)
+  ]);
+  const senLeaders=sen?.candidatos?.slice(0,2)||[];
+  const fedCalc=fed?calcularProporcional(fed):null,estCalc=est?calcularProporcional(est):null;
+  const govStatus=gv.elected?'Eleito TSE':gv.runoff?'2º turno TSE':'Em apuração';
+  const data={
+    uf,pct:gx?.pct||0,
+    govText:`${gv.candidate?.nome||'Aguardando'} · ${govStatus}`,
+    senText:senLeaders.length?senLeaders.map((c,i)=>`${i+1}º ${c.nome} (${fmt(c.votos)} votos)`).join(' · '):'Aguardando dados',
+    fedText:fedCalc?.eleitos?.length?`${fedCalc.eleitos.length} projetado(s) · linha de corte ${fedCalc.linhaDeCorte?.ultimoEleito?.candidato?.nome||'—'}`:'Aguardando projeção',
+    estText:estCalc?.eleitos?.length?`${estCalc.eleitos.length} projetado(s) · linha de corte ${estCalc.linhaDeCorte?.ultimoEleito?.candidato?.nome||'—'}`:'Aguardando projeção'
+  };
+  modal._shareData=data;
+  body.innerHTML=`<div class="quick-head"><div><span class="eyebrow">Resumo da UF</span><h2>${esc(UF_NAME[uf]||uf)} · ${uf}</h2><p>${fmt(gx?.secoesTotalizadas||0)} de ${fmt(gx?.secoesTotal||0)} seções · ${pct(gx?.pct||0)}</p></div><span class="quick-status ${gv.elected?'elected':gv.runoff?'runoff':'counting'}">${esc(govStatus)}</span></div>
+    <div class="quick-grid">
+      <section class="quick-block"><div class="quick-block-title">Governador</div>${stateQuickCandidate(gv.candidate,govStatus)}<button data-open-cargo="3">Abrir Governador →</button></section>
+      <section class="quick-block"><div class="quick-block-title">Senado</div>${senLeaders.map((c,i)=>stateQuickCandidate(c,(c.eleitoTse||/Eleito/i.test(c.situacaoOficial||''))?'Eleito TSE':`${i+1}º agora`)).join('')||'<div class="quick-empty">aguardando</div>'}<button data-open-cargo="5">Abrir Senado →</button></section>
+      <section class="quick-block"><div class="quick-block-title">Deputado Federal</div><div class="quick-cut">${fedCalc?.linhaDeCorte?.ultimoEleito?`Última vaga projetada: <strong>${esc(fedCalc.linhaDeCorte.ultimoEleito.candidato.nome)}</strong> · ${fmt(fedCalc.linhaDeCorte.ultimoEleito.candidato.votos)} votos`:'Aguardando linha de corte'}</div><button data-open-cargo="6">Abrir Federal →</button></section>
+      <section class="quick-block"><div class="quick-block-title">${uf==='DF'?'Deputado Distrital':'Deputado Estadual'}</div><div class="quick-cut">${estCalc?.linhaDeCorte?.ultimoEleito?`Última vaga projetada: <strong>${esc(estCalc.linhaDeCorte.ultimoEleito.candidato.nome)}</strong> · ${fmt(estCalc.linhaDeCorte.ultimoEleito.candidato.votos)} votos`:'Aguardando linha de corte'}</div><button data-open-cargo="${uf==='DF'?'8':'7'}">Abrir ${uf==='DF'?'Distrital':'Estadual'} →</button></section>
+    </div>
+    <button id="shareStateQuick" class="primary-btn quick-share">Compartilhar resumo da UF</button>`;
+  body.querySelectorAll('[data-open-cargo]').forEach(b=>b.onclick=()=>openStateCargo(uf,b.dataset.openCargo));
+  $('#shareStateQuick').onclick=()=>shareStateQuick(data);
 }
 function mountGovernorBrazilMap(gov){
   const host=$('#governorBrazilMap');
   if(!host)return;
   const byUf=new Map((gov?.states||[]).map(x=>[String(x.uf||'').toUpperCase(),x]));
   const focus=$('#governorMapFocus');
-  const openSenate=uf=>{
-    S.uf=String(uf||'').toUpperCase();
-    if(!S.uf)return;
-    S.cargo='5';
-    showView('estados');
-  };
+  const openSenate=uf=>openStateQuickSummary(uf);
   const updateFocus=uf=>{
     const x=byUf.get(String(uf||'').toUpperCase());
     if(focus)focus.innerHTML=governorMapFocusText(x);
