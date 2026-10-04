@@ -10,7 +10,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icon.svg">
-<link rel="stylesheet" href="/app.css">
+<link rel="stylesheet" href="/app.css?v=4.1">
 <title>Apuração 2026 · Resultados TSE</title>
 </head>
 <body>
@@ -53,9 +53,19 @@
   <button data-view="buscar"><span class="mi">⌕</span>Buscar</button>
 </nav>
 
-<script type="module" src="/app.js"></script>
 <script>
-if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{});}
+window.__apFatal=function(err){
+  var msg=(err&&err.message)?err.message:String(err||'Erro desconhecido');
+  var active=document.querySelector('.view.active > div')||document.getElementById('agoraContent');
+  if(active)active.innerHTML='<div class="card pad" style="margin-top:18px"><div class="alert danger"><strong>Falha ao iniciar o painel.</strong><br>'+String(msg).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})+'<br><button class="primary-btn" style="margin-top:10px" onclick="location.reload()">Recarregar</button></div></div>';
+};
+window.addEventListener('error',function(e){window.__apFatal(e.error||e.message)});
+window.addEventListener('unhandledrejection',function(e){window.__apFatal(e.reason||'Falha assíncrona')});
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})}).catch(function(){});
+}
+if('caches' in window){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k)})}).catch(function(){})}
 </script>
+<script defer src="/app.bundle.js?v=4.1"></script>
 </body>
 </html>
