@@ -297,7 +297,11 @@ function candidateForFavorite(c,r,cargo){
   };
 }
 function favoriteButton(c){
-  const key=registerCandidate(c),on=isFavorite(c);
+  const key=registerCandidate(c),favs=getFavorites(),idx=favs.findIndex(x=>favoriteKey(x)===key),on=idx>=0;
+  if(on){
+    favs[idx]={...favs[idx],...c};
+    saveFavorites(favs);
+  }
   return `<button class="favorite-btn ${on?'active':''}" data-favorite-key="${encodeURIComponent(key)}" aria-label="${on?'Remover dos favoritos':'Adicionar aos favoritos'}" title="${on?'Remover dos favoritos':'Favoritar'}">${on?'★':'☆'}</button>`;
 }
 function updateFavoriteSnapshots(results){
@@ -405,7 +409,7 @@ async function loadFavorites(force=false){
   await refreshFavorites(force);
 }
 function syncFavoriteButtons(){
-  $('[data-favorite-key]').forEach(btn=>{
+  $$('[data-favorite-key]').forEach(btn=>{
     let key='';try{key=decodeURIComponent(btn.dataset.favoriteKey||'')}catch{key=btn.dataset.favoriteKey||''}
     const on=getFavorites().some(x=>favoriteKey(x)===key);
     btn.classList.toggle('active',on);
