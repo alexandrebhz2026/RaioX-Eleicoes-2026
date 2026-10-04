@@ -225,3 +225,44 @@ body{overflow-x:hidden}
   .uf-card{flex-basis:154px!important;width:154px!important;min-width:154px!important;min-height:126px}
   .uf-card strong{font-size:17px!important}
 }
+
+/* Interactive Brazil map v4.9 */
+.governor-map-card{padding:16px;overflow:hidden}
+.governor-map-counters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.governor-map-counter{border:1px solid var(--border);background:var(--surface2);border-radius:14px;padding:10px 11px;text-align:center}
+.governor-map-counter span{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.05em;font-weight:900;color:var(--muted)}
+.governor-map-counter strong{display:block;font-size:22px;line-height:1.1;margin-top:4px;font-variant-numeric:tabular-nums}
+.governor-map-counter.elected{background:color-mix(in srgb,var(--success) 10%,var(--surface));border-color:color-mix(in srgb,var(--success) 28%,var(--border));color:var(--success)}
+.governor-map-counter.runoff{background:color-mix(in srgb,var(--warning) 12%,var(--surface));border-color:color-mix(in srgb,var(--warning) 32%,var(--border));color:var(--warning)}
+.governor-map-counter.counting{color:var(--text)}
+.governor-map-wrap{width:min(100%,620px);margin:0 auto;padding:4px 4px 0}
+#governorBrazilMap{width:100%}
+#governorBrazilMap #brmap{width:100%!important;height:100%!important;overflow:visible}
+#governorBrazilMap .state{outline:none}
+#governorBrazilMap .shape,#governorBrazilMap .icon_state{transition:filter .15s ease,opacity .15s ease;stroke:var(--surface);stroke-width:1.2px}
+#governorBrazilMap .state:hover .shape,#governorBrazilMap .state:hover .icon_state,
+#governorBrazilMap .state:focus .shape,#governorBrazilMap .state:focus .icon_state{filter:brightness(.92);opacity:.96;cursor:pointer}
+#governorBrazilMap .label_icon_state{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:12px;font-weight:900;pointer-events:none}
+.governor-map-legend{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px;padding-top:12px;border-top:1px solid var(--border)}
+.governor-map-legend>span{display:grid;grid-template-columns:12px minmax(0,1fr);column-gap:7px;align-items:center}
+.governor-map-legend b{font-size:10px}
+.governor-map-legend small{grid-column:2;color:var(--muted);font-size:9px;line-height:1.3;margin-top:2px}
+.map-legend-dot{width:12px;height:12px;border-radius:50%;display:inline-block}
+.map-legend-dot.elected{background:#22C55E}
+.map-legend-dot.runoff{background:#F59E0B}
+.map-legend-dot.counting{background:#D1D5DB}
+.governor-map-focus{display:flex;flex-direction:column;gap:3px;margin-top:12px;padding:11px 12px;border-radius:13px;background:var(--surface2);border:1px solid var(--border);text-align:center}
+.governor-map-focus strong{font-size:12px}
+.governor-map-focus span{font-size:10px;color:var(--muted);line-height:1.35}
+.governor-map-fallback{margin-top:8px}
+@media(max-width:520px){
+  .governor-map-card{padding:12px}
+  .governor-map-counters{gap:6px}
+  .governor-map-counter{padding:9px 6px}
+  .governor-map-counter span{font-size:8px}
+  .governor-map-counter strong{font-size:19px}
+  .governor-map-legend{grid-template-columns:1fr;gap:7px}
+  .governor-map-legend>span{grid-template-columns:12px auto 1fr}
+  .governor-map-legend small{grid-column:3;margin-top:0}
+  .governor-map-wrap{padding-left:0;padding-right:0}
+}
