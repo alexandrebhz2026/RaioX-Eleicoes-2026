@@ -50,6 +50,7 @@ jobs:
           grep -q "Apuração em tempo real" /tmp/apuracao-dom.html
           grep -q "Governadores por UF" /tmp/apuracao-dom.html
           grep -q "Favoritos" /tmp/apuracao-dom.html
+          grep -q "Favoritos" /tmp/apuracao-dom.html
 
       - name: Live deployment smoke tests
         run: |
