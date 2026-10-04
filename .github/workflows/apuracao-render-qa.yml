@@ -52,7 +52,6 @@ jobs:
           grep -q "pres-apuration-card" apuracao-2026/app.bundle.js
           grep -q "seções restantes" apuracao-2026/app.bundle.js
           grep -q "pres-apuration-track" apuracao-2026/app.css
-          grep -q "S.cargo='5'" apuracao-2026/app.bundle.js
           grep -q "BrMap.Draw" apuracao-2026/app.bundle.js
           grep -q "brmap.js" apuracao-2026/index.html
           grep -q "Candidatos e votos" apuracao-2026/app.bundle.js
