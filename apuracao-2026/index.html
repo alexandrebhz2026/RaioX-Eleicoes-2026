@@ -10,7 +10,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icon.svg">
-<link rel="stylesheet" href="/app.css?v=4.3">
+<link rel="stylesheet" href="/app.css?v=4.4">
 <title>Apuração 2026 · Resultados TSE</title>
 </head>
 <body>
@@ -25,7 +25,7 @@
       <button class="nav-btn" data-view="presidente">Presidente</button>
       <button class="nav-btn" data-view="estados">Estados</button>
       <button class="nav-btn" data-view="congresso">Congresso</button>
-      <button class="nav-btn" data-view="favoritos">Favoritos</button>
+      <button class="nav-btn nav-with-badge" data-view="favoritos">Favoritos <span class="nav-badge hidden" data-fav-badge>0</span></button>
       <button class="nav-btn" data-view="buscar">Buscar</button>
       <button class="nav-btn" data-view="como">Como funciona</button>
     </nav>
@@ -49,10 +49,10 @@
 
 <nav class="mobile-nav" aria-label="Navegação móvel">
   <button class="active" data-view="agora"><span class="mi">●</span>Agora</button>
-  <button data-view="presidente"><span class="mi">★</span>Presidente</button>
+  <button data-view="presidente"><span class="mi">◉</span>Presidente</button>
   <button data-view="estados"><span class="mi">◇</span>Estados</button>
   <button data-view="congresso"><span class="mi">⌂</span>Congresso</button>
-  <button data-view="favoritos"><span class="mi">★</span>Favoritos</button>
+  <button class="mobile-fav-nav" data-view="favoritos"><span class="mi">★</span>Favoritos<span class="mobile-nav-badge hidden" data-fav-badge>0</span></button>
   <button data-view="buscar"><span class="mi">⌕</span>Buscar</button>
 </nav>
 
@@ -69,6 +69,6 @@ if('serviceWorker' in navigator){
 }
 if('caches' in window){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k)})}).catch(function(){})}
 </script>
-<script defer src="/app.bundle.js?v=4.3"></script>
+<script defer src="/app.bundle.js?v=4.4"></script>
 </body>
 </html>
