@@ -21,7 +21,7 @@ jobs:
           browser="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser)"
           test -n "$browser"
           for i in 1 2 3 4 5; do
-            "$browser" --headless --no-sandbox --disable-gpu --virtual-time-budget=15000 --dump-dom "$base/?qa=$GITHUB_SHA&try=$i" > /tmp/apuracao-render.html || true
+            "$browser" --headless --no-sandbox --disable-gpu --window-size=390,844 --virtual-time-budget=15000 --dump-dom "$base/?qa=$GITHUB_SHA&try=$i" > /tmp/apuracao-render.html || true
             if grep -q "Apuração em tempo real" /tmp/apuracao-render.html && grep -q "Favoritos" /tmp/apuracao-render.html; then
               break
             fi
@@ -36,6 +36,12 @@ jobs:
               exit 1
             fi
           done
+          if ! grep -q 'data-scroll-x="ok"' /tmp/apuracao-render.html; then
+            echo "FAILED MOBILE WIDTH: page still overflows horizontally"
+            grep -o 'data-scroll-x="[^"]*"' /tmp/apuracao-render.html | head -1 || true
+            exit 1
+          fi
+          grep -q "Mobile horizontal overflow hardening v5.3" apuracao-2026/app.css
           grep -q "card-action" apuracao-2026/app.css
           grep -q "favorite-btn" apuracao-2026/app.css
           grep -q "view-eleitos" apuracao-2026/index.html
