@@ -40,6 +40,9 @@ jobs:
           mkdir -p .pages/ana-paula
           cp -R colinha-2260-55240-222/. .pages/
           cp -R colinha-ana-paula-pages/. .pages/ana-paula/
+          mkdir -p .pages/apuracao-2026
+          cp -R apuracao-2026/. .pages/apuracao-2026/
+          rm -rf .pages/apuracao-2026/api
           touch .pages/.nojekyll
 
       - name: Upload site
