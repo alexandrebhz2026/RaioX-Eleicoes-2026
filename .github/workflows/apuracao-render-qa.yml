@@ -37,6 +37,9 @@ jobs:
           grep -q "renderProportionalCandidateRanking" apuracao-2026/app.bundle.js
           grep -q "Seções/urnas totalizadas" apuracao-2026/app.bundle.js
           grep -q "secoesTotalizadas" apuracao-2026/app.bundle.js
+          grep -q "gov-elected" apuracao-2026/app.bundle.js
+          grep -q "gov-runoff" apuracao-2026/app.bundle.js
+          grep -q "scroll-snap-type:x" apuracao-2026/app.css
       - name: Validate live TSE proxy used by Render
         run: |
           set -e
