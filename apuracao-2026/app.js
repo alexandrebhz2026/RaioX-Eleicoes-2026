@@ -10,6 +10,8 @@ const S={
   codes:{fed:'6257',est:'6259'},view:'agora',uf:'MG',cargo:'3',cache:new Map(),governors:null,
   congress:{camara:null,senado:null},poll:null,loading:new Set(),lastRefresh:null,candidateIndex:new Map()
 };
+const API_BASE=location.hostname.endsWith('.vercel.app')?'':'https://apuracao-2026-lake.vercel.app';
+const apiUrl=path=>API_BASE+path;
 
 const $=s=>document.querySelector(s);
 const $$=s=>[...document.querySelectorAll(s)];
@@ -19,7 +21,7 @@ const pct=n=>Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximu
 const clamp=n=>Math.max(0,Math.min(100,Number(n||0)));
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function hashColor(s=''){let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;return COLORS[h%COLORS.length]}
-function tsePath(path){return '/api/tse?path='+encodeURIComponent(path)}
+function tsePath(path){return apiUrl('/api/tse?path='+encodeURIComponent(path))}
 function resultPath(cargo,uf){
   const ele=cargo==='1'?S.codes.fed:S.codes.est;
   const abr=cargo==='1'?'br':uf.toLowerCase();
@@ -43,10 +45,63 @@ async function fetchResult(cargo,uf='BR',force=false){
   const r=await fetch(tsePath(resultPath(cargo,uf)),{cache:'no-store'});
   if(!r.ok){if(hit)return hit.data;throw new Error('TSE '+r.status)}
   const raw=await r.json();
-  const data=adaptUnified(raw,{electionCode:ele,uf,cargoCode:cargo,photoBase:'/api/tse?path='});
+  const data=adaptUnified(raw,{electionCode:ele,uf,cargoCode:cargo,photoBase:apiUrl('/api/tse?path=')});
   S.cache.set(key,{at:Date.now(),data,raw}); S.lastRefresh=Date.now(); updateLive();
   return data;
 }
+async function batchMap(items,limit,fn){
+  const out=[];for(let i=0;i<items.length;i+=limit)out.push(...await Promise.all(items.slice(i,i+limit).map(fn)));return out;
+}
+async function governorSummaryClient(force=false){
+  const rows=await batchMap(UFS,4,async ([uf])=>{
+    try{
+      const r=await fetchResult('3',uf,force),official=r.candidatos.filter(c=>c.eleitoTse||c.situacaoOficial);
+      return{uf,ok:true,pct:r.pctTotalizado,md:r.meta.md,tf:r.meta.tf,updated:r.totalizadoEm,
+        leader:r.pctTotalizado>0?(r.candidatos[0]||null):null,
+        official:official.map(c=>({...c,e:c.eleitoTse,st:c.situacaoOficial}))};
+    }catch{return{uf,ok:false,pct:0,md:'n',tf:'n',official:[]}}
+  });
+  return{updatedAt:new Date().toISOString(),states:rows};
+}
+function officialCandidate(c){return !!(c.eleitoTse||(/^Eleito/i.test(c.situacaoOficial||'')&&!/^Não eleito/i.test(c.situacaoOficial||'')))}
+async function congressClient(force=false){
+  const pairs=await batchMap(UFS,4,async ([uf])=>{
+    const [cam,sen]=await Promise.all([
+      fetchResult('6',uf,force).catch(()=>null),
+      fetchResult('5',uf,force).catch(()=>null)
+    ]);
+    return{uf,cam,sen};
+  });
+  const groups=new Map(),camOfficial=[];let seatsTotal=0,camLoaded=0,camPct=0;
+  const senParty=new Map(),senUfs=[];let senLoaded=0,senPct=0,officialCount=0;
+  for(const x of pairs){
+    if(x.cam){
+      camLoaded++;camPct+=x.cam.pctTotalizado;seatsTotal+=x.cam.vagas;
+      for(const g of x.cam.partidos){
+        const key=g.sigla||g.nome,cur=groups.get(key)||{sigla:key,nome:g.nome||key,seats:0,votes:0};
+        cur.seats+=Number(g.vagasOficiais||0);cur.votes+=Number(g.votosValidos||0);groups.set(key,cur);
+      }
+      camOfficial.push(...x.cam.candidatos.filter(officialCandidate));
+    }
+    if(x.sen){
+      senLoaded++;senPct+=x.sen.pctTotalizado;
+      const official=x.sen.candidatos.filter(officialCandidate).map(c=>({...c,official:true}));
+      officialCount+=official.length;
+      for(const c of official){
+        const key=c.partido||'OUTROS',cur=senParty.get(key)||{sigla:key,seats:0};cur.seats++;senParty.set(key,cur);
+      }
+      const leaders=x.sen.pctTotalizado>0?x.sen.candidatos.slice(0,2).map(c=>({...c,official:false})):[];
+      senUfs.push({uf:x.uf,pct:x.sen.pctTotalizado,tf:x.sen.meta.tf,official,leaders});
+    }else senUfs.push({uf:x.uf,pct:0,tf:'n',official:[],leaders:[]});
+  }
+  return{
+    cam:{kind:'camara',updatedAt:new Date().toISOString(),ufsLoaded:camLoaded,ufsTotal:27,pctAverage:camLoaded?camPct/camLoaded:0,seatsTotal,
+      officialSeats:[...groups.values()].sort((a,b)=>b.seats-a.seats||b.votes-a.votes),officialElected:camOfficial},
+    sen:{kind:'senado',updatedAt:new Date().toISOString(),ufsLoaded:senLoaded,ufsTotal:27,pctAverage:senLoaded?senPct/senLoaded:0,
+      seatsContested:54,officialCount,byParty:[...senParty.values()].sort((a,b)=>b.seats-a.seats),ufs:senUfs}
+  };
+}
+
 function cachedRaw(cargo,uf='BR'){return S.cache.get(cargo+':'+uf)?.raw}
 function updateLive(){
   const el=$('#liveTime'); if(!el)return;
@@ -55,7 +110,9 @@ function updateLive(){
 }
 function avatar(c,size=''){
   const num=esc(c.numero||'');
-  return `<div class="avatar ${size}"><img loading="lazy" src="${esc(c.fotoUrl||c.foto||'')}" alt="" onerror="this.remove();this.parentElement.textContent='${num}'"></div>`;
+  let src=c.fotoUrl||c.foto||'';
+  if(API_BASE&&String(src).startsWith('/api/'))src=apiUrl(src);
+  return `<div class="avatar ${size}"><img loading="lazy" src="${esc(src)}" alt="" onerror="this.remove();this.parentElement.textContent='${num}'"></div>`;
 }
 function officialInfo(c,r,cargo,index){
   const st=String(c.situacaoOficial||c.st||'').trim();
@@ -131,7 +188,10 @@ function evolution(){
 }
 async function loadAgora(force=false){
   const host=$('#agoraContent');host.innerHTML='<div class="card pad loading"><div class="empty">Carregando dados oficiais do TSE…</div></div>';
-  const [pres,gov]=await Promise.all([fetchResult('1','BR',force),fetch('/api/summary'+(force?'?t='+Date.now():'')).then(r=>r.ok?r.json():null).catch(()=>null)]);
+  const [pres,gov]=await Promise.all([
+    fetchResult('1','BR',force),
+    API_BASE?governorSummaryClient(force):fetch('/api/summary'+(force?'?t='+Date.now():'')).then(r=>r.ok?r.json():null).catch(()=>null)
+  ]);
   S.governors=gov;recordPresident(pres);
   const official=officialSelected(pres,'1');
   const defined=pres.meta.md==='e'?'Eleito definido':pres.meta.md==='s'?'2º turno definido':pres.meta.tf==='s'?'Final':'Em apuração';
@@ -246,8 +306,12 @@ function bars(rows,key='seats',maxRows=14){
 }
 async function loadCongress(force=false){
   const host=$('#congressContent');host.innerHTML='<div class="page-head"><div><div class="eyebrow">Congresso Nacional</div><h1 class="page-title">Câmara e Senado</h1></div></div><div class="card pad loading"><div class="empty">Carregando as 27 UFs em lotes seguros…</div></div>';
-  const suffix=force?'&t='+Date.now():'';
-  const [cam,sen]=await Promise.all([fetch('/api/congress?kind=camara'+suffix,{cache:'no-store'}).then(r=>r.json()),fetch('/api/congress?kind=senado'+suffix,{cache:'no-store'}).then(r=>r.json())]);
+  let cam,sen;
+  if(API_BASE){const agg=await congressClient(force);cam=agg.cam;sen=agg.sen}
+  else{
+    const suffix=force?'&t='+Date.now():'';
+    [cam,sen]=await Promise.all([fetch('/api/congress?kind=camara'+suffix,{cache:'no-store'}).then(r=>r.json()),fetch('/api/congress?kind=senado'+suffix,{cache:'no-store'}).then(r=>r.json())]);
+  }
   S.congress={camara:cam,senado:sen};const seats=(cam.officialSeats||[]).reduce((s,x)=>s+x.seats,0);
   host.innerHTML=`
   <div class="page-head"><div><div class="eyebrow">Congresso Nacional</div><h1 class="page-title">Câmara e Senado</h1><div class="page-sub">Distribuição oficial atualizada UF por UF. Cadeiras ainda não atribuídas permanecem neutras.</div></div><div class="source-pill">${cam.ufsLoaded}/27 UFs carregadas</div></div>
@@ -466,7 +530,7 @@ async function doSearch(){
   btn.disabled=true;btn.textContent='Buscando…';
   $('#searchResults').innerHTML='<div class="card compact-pad loading"><div class="empty">Consultando arquivos oficiais do TSE…</div></div>';
   try{
-    const r=await fetch('/api/search?q='+encodeURIComponent(q)+(uf?'&uf='+encodeURIComponent(uf):'')+(cargo?'&cargo='+encodeURIComponent(cargo):''),{cache:'no-store'});
+    const r=await fetch(apiUrl('/api/search?q='+encodeURIComponent(q)+(uf?'&uf='+encodeURIComponent(uf):'')+(cargo?'&cargo='+encodeURIComponent(cargo):''),{cache:'no-store'});
     const j=await r.json();
     const results=j.results||[];
     results.forEach(registerCandidate);
