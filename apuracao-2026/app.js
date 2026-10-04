@@ -151,12 +151,17 @@ function electionAlert(r,cargo){
   if((r?.pctTotalizado||0)===0)return '<div class="alert waiting">Aguardando o início da totalização. Candidatos e vagas já estão carregados; votos, QE e cadeiras surgirão conforme o TSE publicar.</div>';
   return `<div class="alert waiting">Apuração parcial do TSE: <strong>${pct(r.pctTotalizado)}</strong> das seções totalizadas. “Liderando” não significa eleito.</div>`;
 }
-function candidateRow(c,r,cargo,index){
+function candidateRow(c,r,cargo,index,opts={}){
   const oi=officialInfo(c,r,cargo,index),fav=candidateForFavorite(c,r,cargo);
-  return `<div class="candidate-row">
+  const deputy=['6','7','8'].includes(String(cargo));
+  const officialElected=deputy&&!!oi?.official&&/eleit/i.test(String(oi.label||''))&&!/não|nao|suplente|2.? ?turno/i.test(String(oi.label||''));
+  const projected=deputy&&!!opts.projected&&!officialElected;
+  const rowClass=officialElected?' candidate-official-elected':projected?' candidate-projected-elected':'';
+  const projectionBadge=projected?'<span class="projection-badge">Projetado eleito · cálculo atual</span>':'';
+  return `<div class="candidate-row${rowClass}">
     <div class="rank">${index+1}º</div>${avatar(c)}
     <div><div class="cand-name">${esc(c.nome)}</div><div class="cand-meta">${esc(c.numero)} · ${esc(c.partido)} · ${fmt(c.votos)} votos</div>
-      <div class="vote-bar"><span style="width:${clamp(c.pct)}%"></span></div>${oi?`<span class="${oi.cls}">${esc(oi.label)}</span>`:''}
+      <div class="vote-bar"><span style="width:${clamp(c.pct)}%"></span></div>${oi?`<span class="${oi.cls}">${esc(oi.label)}</span>`:''}${projectionBadge}
     </div>
     <div class="right-stat candidate-actions">${favoriteButton(fav)}<strong>${pct(c.pct)}</strong><small>${r?.pctTotalizado?pct(r.pctTotalizado)+' apurado':''}</small></div>
   </div>`;
@@ -398,15 +403,22 @@ function officialSeatBar(r){
   if(!rows.length)return '<div class="empty">O TSE ainda não atribuiu cadeiras.</div>';
   return `<div class="seat-bar">${rows.map(x=>`<span title="${esc(x.sigla)} · ${x.seats}" style="width:${x.seats/total*100}%;background:${hashColor(x.sigla)}"></span>`).join('')}</div><div class="seat-legend">${rows.slice(0,10).map(x=>`<span><i class="legend-dot" style="display:inline-block;background:${hashColor(x.sigla)}"></i> ${esc(x.sigla)} ${x.seats}</span>`).join('')}</div>`;
 }
-function renderProportionalCandidateRanking(r,cargo){
+function renderProportionalCandidateRanking(r,cargo,calc){
   const list=orderedCandidates(r);
+  const projectedIds=new Set((calc?.eleitos||[]).map(e=>String(e.candidato?.id||'')));
+  const isProjected=c=>projectedIds.has(String(c.id||''));
   const first=list.slice(0,80),rest=list.slice(80);
-  const rows=first.map((c,i)=>candidateRow(c,r,cargo,i)).join('');
-  const extra=rest.length?`<div class="candidate-list prop-candidate-more hidden">${rest.map((c,i)=>candidateRow(c,r,cargo,i+80)).join('')}</div>
+  const rows=first.map((c,i)=>candidateRow(c,r,cargo,i,{projected:isProjected(c)})).join('');
+  const extra=rest.length?`<div class="candidate-list prop-candidate-more hidden">${rest.map((c,i)=>candidateRow(c,r,cargo,i+80,{projected:isProjected(c)})).join('')}</div>
     <button class="modern-link-btn prop-show-all" data-show-prop-all type="button">Mostrar todos os ${fmt(list.length)} candidatos <span>↓</span></button>`:'';
   return `<section class="card pad section prop-candidates-card">
     <div class="section-head"><div><div class="eyebrow">Votação nominal</div><div class="section-title">Candidatos e votos</div></div><div class="section-note">${fmt(list.length)} candidaturas · ordem atual do TSE</div></div>
-    <div class="prop-candidate-note">Cada linha mostra <strong>votos nominais</strong>, percentual, partido e situação oficial quando o TSE já tiver atribuído.</div>
+    <div class="projection-legend">
+      <span class="projection-legend-item official"><i></i><b>Eleito TSE</b><small>situação oficial</small></span>
+      <span class="projection-legend-item projected"><i></i><b>Projetado eleito</b><small>cálculo atual do app</small></span>
+      <span class="projection-legend-item neutral"><i></i><b>Demais candidatos</b><small>fora das vagas neste momento</small></span>
+    </div>
+    <div class="prop-candidate-note">Cada linha mostra <strong>votos nominais</strong>, percentual, partido e situação oficial. O verde claro é uma <strong>projeção dinâmica</strong> e pode mudar a cada atualização.</div>
     <div class="candidate-list">${rows||'<div class="empty">Nenhuma candidatura disponível neste arquivo.</div>'}</div>
     ${extra}
   </section>`;
@@ -447,10 +459,10 @@ function renderProportional(r,cargo){
       <div class="card pad"><div class="eyebrow">Sobras</div><div class="section-title">Rodadas por maiores médias</div><div class="round-list">${calc.rodadas.length?calc.rodadas.slice(0,12).map(x=>`<div class="round"><div class="round-head"><span>Rodada ${x.rodada} · ${esc(x.fase)}</span><span>${x.empateIndefinido?'empate':''}</span></div><div class="round-winner">${x.vencedorSigla?esc(x.vencedorSigla)+' · '+esc(x.candidatoNome||''):'sem cadeira atribuída'}</div></div>`).join(''):'<div class="empty">As rodadas aparecerão quando houver votos válidos.</div>'}</div></div>
     </aside>
   </div>
-  ${renderProportionalCandidateRanking(r,cargo)}
+  ${renderProportionalCandidateRanking(r,cargo,calc)}
   <div class="two-col section" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
     <section class="card pad"><div class="section-head"><div><div class="eyebrow">Situação oficial TSE</div><div class="section-title">Eleitos e suplentes</div></div><div class="section-note">${officialElected.length} eleito(s) oficial(is)</div></div><div class="candidate-list">${r.candidatos.filter(c=>c.situacaoOficial||c.eleitoTse).slice(0,80).map((c,i)=>candidateRow(c,r,cargo,i)).join('')||'<div class="empty">O TSE ainda não atribuiu situação final aos candidatos.</div>'}</div></section>
-    <section class="card pad"><div class="section-head"><div><div class="eyebrow">Projeção auditável</div><div class="section-title">Eleitos pelo cálculo atual</div></div><div class="section-note">${calc.eleitos.length} identidade(s) calculada(s)</div></div><div class="candidate-list">${calc.eleitos.slice(0,80).map((e,i)=>candidateRow(e.candidato,r,cargo,i)).join('')||'<div class="empty">Sem projeção enquanto não houver votos suficientes.</div>'}</div></section>
+    <section class="card pad"><div class="section-head"><div><div class="eyebrow">Projeção auditável</div><div class="section-title">Eleitos pelo cálculo atual</div></div><div class="section-note">${calc.eleitos.length} identidade(s) calculada(s)</div></div><div class="candidate-list">${calc.eleitos.slice(0,80).map((e,i)=>candidateRow(e.candidato,r,cargo,i,{projected:true})).join('')||'<div class="empty">Sem projeção enquanto não houver votos suficientes.</div>'}</div></section>
   </div>`;
 }
 function createHemicycle(groups,totalSeats=513){
