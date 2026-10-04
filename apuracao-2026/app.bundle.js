@@ -1,4 +1,4 @@
-/* Apuracao 2026 browser bundle v5.0 */
+/* Apuracao 2026 browser bundle v5.1 */
 function tseInt(v){return Number(String(v??'0').replace(/\./g,'').replace(',','.'))||0}
 function tsePct(v){return Number(String(v??'0').replace(',','.'))||0}
 function roundQE(vv,seats){if(seats<=0)return 0;const raw=vv/seats,f=Math.floor(raw);return raw-f>0.5?f+1:f}
@@ -389,12 +389,26 @@ function renderGovernorGrid(gov){
     </button>`;
   }).join('');
 }
+function presidentApurationPanel(r){
+  const total=Number(r.secoesTotal||0),done=Number(r.secoesTotalizadas||0),remaining=Math.max(0,total-done);
+  return `<div class="pres-apuration-card">
+    <div class="pres-apuration-top">
+      <div><span class="pres-apuration-label">Apuração nacional</span><strong class="pres-apuration-pct">${pct(r.pctTotalizado)}</strong></div>
+      <div class="pres-apuration-count"><strong>${fmt(done)} <span>de ${fmt(total)}</span></strong><small>seções/urnas totalizadas</small></div>
+    </div>
+    <div class="pres-apuration-track" aria-label="${pct(r.pctTotalizado)} das seções totalizadas"><span style="width:${clamp(r.pctTotalizado)}%"></span></div>
+    <div class="pres-apuration-foot">
+      <span><b>${fmt(remaining)}</b> seções restantes</span>
+      <span>Atualizado ${esc(r.totalizadoEm||'aguardando')}</span>
+    </div>
+  </div>`;
+}
 async function loadPresident(force=false){
   const host=$('#presidentContent');host.innerHTML='<div class="card pad loading"><div class="empty">Carregando Presidente…</div></div>';
   const r=await fetchResult('1','BR',force);recordPresident(r);
   const official=officialSelected(r,'1');
   host.innerHTML=`
-  <div class="page-head"><div><div class="eyebrow">Brasil · 1º turno</div><h1 class="page-title">Presidente da República</h1><div class="page-sub">Ranking, situação oficial, votos e evolução da totalização.</div></div><div class="ring-wrap"><div class="ring" style="--p:${clamp(r.pctTotalizado)}%"><span>${pct(r.pctTotalizado)}</span></div><div class="ring-copy"><strong>${fmt(r.secoesTotalizadas)} de ${fmt(r.secoesTotal)}</strong><small>seções/urnas totalizadas · ${esc(r.totalizadoEm||'aguardando')}</small></div></div></div>
+  <div class="page-head president-head"><div><div class="eyebrow">Brasil · 1º turno</div><h1 class="page-title">Presidente da República</h1><div class="page-sub">Ranking, situação oficial, votos e evolução da totalização.</div></div>${presidentApurationPanel(r)}</div>
   ${electionAlert(r,'1')}
   <div class="pres-grid section">
     <section class="card pad"><div class="section-head"><div><div class="eyebrow">Placar oficial</div><div class="section-title">Candidatos</div></div><div class="section-note">${r.candidatos.length} candidaturas</div></div><div class="candidate-list">${orderedCandidates(r).map((c,i)=>candidateRow(c,r,'1',i)).join('')}</div></section>
