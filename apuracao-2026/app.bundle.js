@@ -1,4 +1,4 @@
-/* Apuracao 2026 browser bundle v4.8 */
+/* Apuracao 2026 browser bundle v4.9 */
 function tseInt(v){return Number(String(v??'0').replace(/\./g,'').replace(',','.'))||0}
 function tsePct(v){return Number(String(v??'0').replace(',','.'))||0}
 function roundQE(vv,seats){if(seats<=0)return 0;const raw=vv/seats,f=Math.floor(raw);return raw-f>0.5?f+1:f}
@@ -250,9 +250,9 @@ async function loadAgora(force=false){
         <div class="card metric-card"><div class="metric-label">Próxima atualização</div><div class="metric-value" style="font-size:20px">30 segundos</div><div class="metric-foot">somente nas telas em uso</div></div>
       </aside>
     </div>
-    <section class="section"><div class="section-head"><div><div class="eyebrow">Mapa rápido</div><div class="section-title">Governadores por UF</div></div><div class="section-note">clique para abrir o estado</div></div><div class="uf-grid">${renderGovernorGrid(gov)}</div></section>
+    <section class="section"><div class="section-head"><div><div class="eyebrow">Mapa rápido</div><div class="section-title">Governadores por UF</div></div><div class="section-note">toque no estado · abre Senado</div></div>${governorMapPanel(gov)}</section>
     <section class="section"><div class="info-grid"><div class="card info-card"><h3>Câmara dos Deputados</h3><p>513 cadeiras. O painel Congresso mostra a distribuição nacional por partido/federação usando <strong>TSE agora</strong> e as cadeiras já atribuídas em cada UF.</p><button class="card-action" data-go="congresso">Congresso <span>→</span></button></div><div class="card info-card"><h3>Senado Federal</h3><p>54 vagas em disputa em 2026, duas por UF. Antes da definição oficial mostramos os dois líderes; depois, somente o status de eleito informado pelo TSE.</p><button class="card-action" data-go="congresso">Senado <span>→</span></button></div></div></section>`;
-  wireGo();syncFavoriteButtons();wireFavorites(host);
+  wireGo();syncFavoriteButtons();wireFavorites(host);mountGovernorBrazilMap(gov);
 }
 function governorVisualState(x){
   const officials=x?.official||[];
@@ -269,6 +269,105 @@ function governorVisualState(x){
   const candidate=winner||x?.leader||officials[0]||null;
   return{elected,runoff,candidate};
 }
+
+function governorMapStats(gov){
+  const states=gov?.states||[];
+  let elected=0,runoff=0,counting=0;
+  for(const x of states){
+    const s=governorVisualState(x);
+    if(s.elected)elected++;
+    else if(s.runoff)runoff++;
+    else counting++;
+  }
+  return{elected,runoff,counting,total:states.length};
+}
+function governorMapPanel(gov){
+  const stats=governorMapStats(gov);
+  return `<div class="card governor-map-card">
+    <div class="governor-map-counters">
+      <div class="governor-map-counter elected"><span>Eleitos TSE</span><strong>${stats.elected}</strong></div>
+      <div class="governor-map-counter runoff"><span>2º turno</span><strong>${stats.runoff}</strong></div>
+      <div class="governor-map-counter counting"><span>Em apuração</span><strong>${stats.counting}</strong></div>
+    </div>
+    <div class="governor-map-wrap"><div id="governorBrazilMap" aria-label="Mapa interativo do Brasil"></div></div>
+    <div class="governor-map-legend" aria-label="Legenda do mapa">
+      <span><i class="map-legend-dot elected"></i><b>Eleito TSE</b><small>governador eleito oficialmente</small></span>
+      <span><i class="map-legend-dot runoff"></i><b>2º turno TSE</b><small>disputa definida para o segundo turno</small></span>
+      <span><i class="map-legend-dot counting"></i><b>Em apuração</b><small>ainda sem definição oficial</small></span>
+    </div>
+    <div id="governorMapFocus" class="governor-map-focus"><strong>Toque em um estado</strong><span>abre direto o Senado da UF · no computador, passe o mouse para ver líder e seções</span></div>
+  </div>`;
+}
+function governorMapFocusText(x){
+  if(!x)return '<strong>Toque em um estado</strong><span>abre direto o Senado da UF</span>';
+  const state=governorVisualState(x);
+  const status=state.elected?'Eleito TSE':state.runoff?'2º turno TSE':'Em apuração';
+  const name=state.candidate?.nome||'Aguardando candidato';
+  return `<strong>${esc(x.uf)} · ${esc(name)}</strong><span>${esc(status)} · ${fmt(x.secoesTotalizadas||0)} de ${fmt(x.secoesTotal||0)} seções · ${pct(x.pct||0)}</span>`;
+}
+function mountGovernorBrazilMap(gov){
+  const host=$('#governorBrazilMap');
+  if(!host)return;
+  const byUf=new Map((gov?.states||[]).map(x=>[String(x.uf||'').toUpperCase(),x]));
+  const focus=$('#governorMapFocus');
+  const openSenate=uf=>{
+    S.uf=String(uf||'').toUpperCase();
+    if(!S.uf)return;
+    S.cargo='5';
+    showView('estados');
+  };
+  const updateFocus=uf=>{
+    const x=byUf.get(String(uf||'').toUpperCase());
+    if(focus)focus.innerHTML=governorMapFocusText(x);
+  };
+
+  if(typeof BrMap==='undefined'){
+    host.innerHTML=`<div class="uf-grid governor-map-fallback">${renderGovernorGrid(gov)}</div>`;
+    host.querySelectorAll('[data-uf]').forEach(el=>el.onclick=()=>openSenate(el.dataset.uf));
+    return;
+  }
+
+  BrMap.Draw({
+    wrapper:'#governorBrazilMap',
+    cssFill:{shape:'#D7DAE1',icon_state:'#D7DAE1',label_icon_state:'#242631',label_state:'#FFFFFF',selected:'#C7CBD5'},
+    callbacks:{
+      click:(element,uf)=>openSenate(uf),
+      mouseover:(element,uf)=>updateFocus(uf)
+    }
+  });
+
+  const injected=[...document.head.querySelectorAll('style')].filter(s=>String(s.textContent||'').includes('.state .shape { fill:'));
+  injected.slice(0,-1).forEach(s=>s.remove());
+
+  for(const [uf] of UFS){
+    const id=uf.toLowerCase(),x=byUf.get(uf),state=governorVisualState(x);
+    const tone=state.elected?'elected':state.runoff?'runoff':'counting';
+    const fill=state.elected?'#22C55E':state.runoff?'#F59E0B':'#D1D5DB';
+    const darkFill=state.elected?'#16A34A':state.runoff?'#D97706':'#525866';
+    const shape=document.querySelector(id==='df'?`#icon_${id}`:`#shape_${id}`);
+    const label=document.querySelector(`#label_icon_state_${id}`);
+    const link=document.querySelector(`#state_${id}`);
+    if(shape){
+      shape.style.fill=document.documentElement.dataset.theme==='dark'?darkFill:fill;
+      shape.style.stroke='var(--surface)';
+      shape.style.strokeWidth='1.2px';
+    }
+    if(label){
+      label.style.fill=state.elected||state.runoff?'#111827':'#374151';
+      label.style.fontWeight='900';
+      label.style.pointerEvents='none';
+    }
+    if(link){
+      link.classList.add('map-state-'+tone);
+      link.setAttribute('tabindex','0');
+      link.setAttribute('role','button');
+      link.setAttribute('aria-label',governorMapFocusText(x).replace(/<[^>]+>/g,' '));
+      link.addEventListener('focus',()=>updateFocus(uf));
+      link.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openSenate(uf)}});
+    }
+  }
+}
+
 function renderGovernorGrid(gov){
   if(!gov?.states)return UFS.map(([uf])=>`<button class="uf-card" data-uf="${uf}"><strong>${uf}</strong><span class="gov-name">Carregando…</span></button>`).join('');
   return gov.states.map(x=>{
