@@ -223,11 +223,35 @@ async function loadAgora(force=false){
     <section class="section"><div class="info-grid"><div class="card info-card"><h3>Câmara dos Deputados</h3><p>513 cadeiras. O painel Congresso mostra a distribuição nacional por partido/federação usando <strong>TSE agora</strong> e as cadeiras já atribuídas em cada UF.</p><button class="card-action" data-go="congresso">Congresso <span>→</span></button></div><div class="card info-card"><h3>Senado Federal</h3><p>54 vagas em disputa em 2026, duas por UF. Antes da definição oficial mostramos os dois líderes; depois, somente o status de eleito informado pelo TSE.</p><button class="card-action" data-go="congresso">Senado <span>→</span></button></div></div></section>`;
   wireGo();syncFavoriteButtons();wireFavorites(host);
 }
+function governorVisualState(x){
+  const officials=x?.official||[];
+  const statusTexts=officials.map(c=>String(c.st||c.situacaoOficial||'').toLowerCase());
+  const elected=String(x?.md||'').toLowerCase()==='e'||officials.some(c=>{
+    const st=String(c.st||c.situacaoOficial||'').toLowerCase();
+    return String(c.e||'').toLowerCase()==='s'||(st.includes('eleito')&&!st.includes('não eleito')&&!st.includes('2º turno')&&!st.includes('2o turno')&&!st.includes('segundo turno'));
+  });
+  const runoff=!elected&&(String(x?.md||'').toLowerCase()==='s'||statusTexts.some(st=>st.includes('2º turno')||st.includes('2o turno')||st.includes('segundo turno')));
+  const winner=officials.find(c=>{
+    const st=String(c.st||c.situacaoOficial||'').toLowerCase();
+    return String(c.e||'').toLowerCase()==='s'||(st.includes('eleito')&&!st.includes('não eleito')&&!st.includes('turno'));
+  });
+  const candidate=winner||x?.leader||officials[0]||null;
+  return{elected,runoff,candidate};
+}
 function renderGovernorGrid(gov){
-  if(!gov?.states)return UFS.map(([uf])=>`<button class="uf-card" data-uf="${uf}"><strong>${uf}</strong><span>abrir</span></button>`).join('');
+  if(!gov?.states)return UFS.map(([uf])=>`<button class="uf-card" data-uf="${uf}"><strong>${uf}</strong><span class="gov-name">Carregando…</span></button>`).join('');
   return gov.states.map(x=>{
-    const c=x.official?.find(c=>c.e)||x.leader, label=x.md==='s'?'2º turno TSE':x.md==='e'?'eleito TSE':x.tf==='s'?'final':x.pct>0?(c?.nome||'apurando'):'aguardando';
-    return `<button class="uf-card" data-uf="${x.uf}"><strong>${x.uf}</strong><span class="${x.md==='e'||x.tf==='s'?'mini-status':''}">${esc(label)}</span><span>${fmt(x.secoesTotalizadas||0)} / ${fmt(x.secoesTotal||0)}</span><span>${pct(x.pct||0)}</span></button>`;
+    const state=governorVisualState(x);
+    const cls=state.elected?'gov-elected':state.runoff?'gov-runoff':'gov-counting';
+    const status=state.elected?'Eleito TSE':state.runoff?'2º turno TSE':'';
+    const name=state.candidate?.nome||((x.pct||0)>0?'Apurando':'Aguardando');
+    return `<button class="uf-card ${cls}" data-uf="${x.uf}">
+      <strong>${x.uf}</strong>
+      <span class="gov-name">${esc(name)}</span>
+      ${status?`<span class="gov-status-pill">${esc(status)}</span>`:''}
+      <span class="gov-sections">${fmt(x.secoesTotalizadas||0)} / ${fmt(x.secoesTotal||0)} seções</span>
+      <span class="gov-pct">${pct(x.pct||0)}</span>
+    </button>`;
   }).join('');
 }
 async function loadPresident(force=false){
