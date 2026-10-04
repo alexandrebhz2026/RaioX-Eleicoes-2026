@@ -530,7 +530,7 @@ async function doSearch(){
   btn.disabled=true;btn.textContent='Buscando…';
   $('#searchResults').innerHTML='<div class="card compact-pad loading"><div class="empty">Consultando arquivos oficiais do TSE…</div></div>';
   try{
-    const r=await fetch(apiUrl('/api/search?q='+encodeURIComponent(q)+(uf?'&uf='+encodeURIComponent(uf):'')+(cargo?'&cargo='+encodeURIComponent(cargo):''),{cache:'no-store'});
+    const r=await fetch(apiUrl('/api/search?q='+encodeURIComponent(q)+(uf?'&uf='+encodeURIComponent(uf):'')+(cargo?'&cargo='+encodeURIComponent(cargo):'')),{cache:'no-store'});
     const j=await r.json();
     const results=j.results||[];
     results.forEach(registerCandidate);
