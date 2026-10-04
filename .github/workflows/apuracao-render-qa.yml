@@ -27,14 +27,15 @@ jobs:
             fi
             sleep 10
           done
-          grep -q "Apuração em tempo real" /tmp/apuracao-render.html
-          grep -q "Governadores por UF" /tmp/apuracao-render.html
-          grep -q "Favoritos" /tmp/apuracao-render.html
-          grep -q "Eleitos" /tmp/apuracao-render.html
-          grep -q 'id="brmap"' /tmp/apuracao-render.html
-          grep -q 'state_mg' /tmp/apuracao-render.html
-          grep -q "governor-map-counters" /tmp/apuracao-render.html
-          grep -q "seções/urnas" /tmp/apuracao-render.html
+          for needle in "Apuração em tempo real" "Governadores por UF" "Favoritos" "Eleitos" 'id="brmap"' "state_mg" "governor-map-counters" "seções/urnas"; do
+            if ! grep -q "$needle" /tmp/apuracao-render.html; then
+              echo "FAILED DOM MARKER: $needle"
+              grep -o "Falha ao iniciar o painel[^<]*" /tmp/apuracao-render.html || true
+              grep -o "Não foi possível carregar esta tela agora[^<]*" /tmp/apuracao-render.html || true
+              tail -c 12000 /tmp/apuracao-render.html || true
+              exit 1
+            fi
+          done
           grep -q "card-action" apuracao-2026/app.css
           grep -q "favorite-btn" apuracao-2026/app.css
           grep -q "view-eleitos" apuracao-2026/index.html
