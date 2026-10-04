@@ -172,7 +172,7 @@ function liveEventsPanel(){
   </section>`;
 }
 function wireLiveEvents(){
-  $$$('[data-event-uf]').forEach(b=>b.onclick=()=>{
+  $$('[data-event-uf]').forEach(b=>b.onclick=()=>{
     const uf=b.dataset.eventUf,cargo=b.dataset.eventCargo;
     if(uf){S.uf=uf;S.cargo=cargo||'3';showView('estados')}
     else if(cargo==='1')showView('presidente');
@@ -700,7 +700,7 @@ function electedSection(title,subtitle,html,count=0){
   return `<section class="card elected-section"><div class="section-head"><div><div class="eyebrow">${esc(subtitle)}</div><div class="section-title">${esc(title)}</div></div><div class="section-note">${fmt(count)} resultado(s)</div></div><div class="elected-list">${html||'<div class="empty">Nenhum resultado neste filtro.</div>'}</div></section>`;
 }
 function wireElectedControls(){
-  $$$('[data-elected-mode]').forEach(b=>b.onclick=()=>{S.electedMode=b.dataset.electedMode;loadElected(false)});
+  $$('[data-elected-mode]').forEach(b=>b.onclick=()=>{S.electedMode=b.dataset.electedMode;loadElected(false)});
   $('#electedUf')?.addEventListener('change',e=>{S.electedUf=e.target.value;S.electedCargo='all';loadElected(false)});
   $('#electedCargo')?.addEventListener('change',e=>{S.electedCargo=e.target.value;loadElected(false)});
 }
