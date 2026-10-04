@@ -1,4 +1,4 @@
-/* Apuracao 2026 browser bundle v4.3 */
+/* Apuracao 2026 browser bundle v4.4 */
 function tseInt(v){return Number(String(v??'0').replace(/\./g,'').replace(',','.'))||0}
 function tsePct(v){return Number(String(v??'0').replace(',','.'))||0}
 function roundQE(vv,seats){if(seats<=0)return 0;const raw=vv/seats,f=Math.floor(raw);return raw-f>0.5?f+1:f}
@@ -461,7 +461,7 @@ function toggleFavorite(key){
   if(navigator.vibrate)navigator.vibrate(25);
   renderFavorites();
   syncFavoriteButtons();
-  if(S.view==='favoritos')loadFavoritesView();
+  if(S.view==='favoritos')renderFavoritesPage();
 }
 function wireFavorites(root=document){
   root.querySelectorAll('[data-favorite-key]').forEach(btn=>{
@@ -488,6 +488,7 @@ function initSearch(){
   const btn=$('#searchBtn'),input=$('#searchInput');
   btn.onclick=doSearch;
   input.onkeydown=e=>{if(e.key==='Enter')doSearch()};
+  updateFavoriteBadges();
 }
 async function doSearch(){
   const q=$('#searchInput').value.trim(),uf=$('#searchUF').value,cargo=$('#searchCargo').value;
@@ -514,36 +515,6 @@ async function doSearch(){
 }
 
 
-function loadFavoritesView(){
-  const host=$('#favoritesContent');
-  if(!host)return;
-  const favs=getFavorites();
-  favs.forEach(registerCandidate);
-  if(!favs.length){
-    host.innerHTML=`<div class="page-head"><div><div class="eyebrow">Acompanhamento pessoal</div><h1 class="page-title">Favoritos</h1><div class="page-sub">Todos os candidatos que você marcar com ★ ficam aqui.</div></div></div>
-    <div class="card pad favorites-empty"><div class="favorites-empty-icon">☆</div><h3>Nenhum favorito ainda</h3><p>Abra Buscar, Presidente ou Estados e toque na estrela de qualquer candidato. Vale para todos os cargos.</p><button class="primary-btn" data-go="buscar">Buscar candidatos</button></div>`;
-    wireGo();
-    return;
-  }
-  const order=['Presidente','Governador','Senador','Deputado Federal','Deputado Estadual','Deputado Distrital'];
-  const groups=new Map();
-  for(const c of favs){
-    const name=c.cargo||CARGO[String(c.cargoCodigo)]||'Outros';
-    if(!groups.has(name))groups.set(name,[]);
-    groups.get(name).push(c);
-  }
-  const names=[...groups.keys()].sort((x,y)=>{
-    const ix=order.indexOf(x),iy=order.indexOf(y);
-    return (ix<0?99:ix)-(iy<0?99:iy)||x.localeCompare(y,'pt-BR');
-  });
-  host.innerHTML=`<div class="page-head"><div><div class="eyebrow">Acompanhamento pessoal</div><h1 class="page-title">Favoritos</h1><div class="page-sub">${favs.length} candidato(s) salvo(s) neste aparelho, de qualquer cargo.</div></div><div class="favorites-total">★ ${favs.length}</div></div>
-  <div class="favorites-groups">${names.map(name=>{
-    const list=groups.get(name)||[];
-    return `<section class="card favorites-group"><div class="favorites-group-head"><div><div class="eyebrow">${esc(name)}</div><div class="section-title">${list.length} favorito(s)</div></div></div><div class="search-results favorite-list">${list.map(c=>searchResultCard(c,{favoriteContext:true})).join('')}</div></section>`;
-  }).join('')}</div>`;
-  wireFavorites(host);
-}
-
 function loadHow(){
   const host=$('#howContent');host.innerHTML=`<div class="page-head"><div><div class="eyebrow">Transparência</div><h1 class="page-title">Como funciona</h1><div class="page-sub">O app separa dado oficial de cálculo próprio.</div></div></div><div class="info-grid">
   <div class="card info-card"><h3>ELEITO / 2º TURNO · TSE</h3><p>Para Presidente e Governador, o campo <strong>md</strong> do arquivo oficial indica quando a eleição fica matematicamente definida antes do fim: <strong>e</strong> = eleito e <strong>s</strong> = segundo turno. O candidato correspondente vem com <strong>e=s</strong>.</p></div>
@@ -559,7 +530,6 @@ async function loadView(view,force=false){
     else if(view==='congresso')await loadCongress(force);
     else if(view==='favoritos')await loadFavorites(force);
     else if(view==='buscar')initSearch();
-    else if(view==='favoritos')loadFavoritesView();
     else if(view==='como')loadHow();
   }catch(e){const id=view==='presidente'?'presidentContent':view==='estados'?'stateContent':view==='congresso'?'congressContent':view==='buscar'?'searchContent':view==='favoritos'?'favoritesContent':view==='como'?'howContent':'agoraContent';$('#'+id).innerHTML=`<div class="card pad"><div class="alert danger">Não foi possível carregar esta tela agora. ${esc(e.message||'')} <button class="ghost-btn" id="retryBtn">tentar novamente</button></div></div>`;$('#retryBtn')?.addEventListener('click',()=>loadView(view,true))}
 }
