@@ -43,6 +43,9 @@ jobs:
           cp repo-main/painel-colinhas-engajamento/index.html _site/painel-colinhas-engajamento/index.html
           mkdir -p _site/ana-paula
           cp repo-main/colinha-ana-paula-pages/index.html _site/ana-paula/index.html
+          mkdir -p _site/apuracao-2026
+          cp -R repo-main/apuracao-2026/. _site/apuracao-2026/
+          rm -rf _site/apuracao-2026/api
           touch _site/.nojekyll
       - name: Enviar artefato
         uses: actions/upload-pages-artifact@v3
