@@ -112,3 +112,10 @@ button,input,select{font:inherit}button{cursor:pointer}img{display:block}.hidden
   .favorite-side>strong{font-size:16px}
   .mobile-badge{right:8%}
 }
+
+/* Deputy candidate ranking v4.6 */
+.prop-candidates-card{margin-top:14px}
+.prop-candidate-note{margin:-2px 0 12px;padding:10px 12px;border:1px solid var(--border);background:var(--surface2);border-radius:12px;color:var(--muted);font-size:11px;line-height:1.45}
+.prop-candidate-note strong{color:var(--text)}
+.prop-show-all{margin:13px auto 0;display:flex}
+.prop-candidate-more{margin-top:8px}
