@@ -56,7 +56,7 @@ async function governorSummaryClient(force=false){
   const rows=await batchMap(UFS,4,async ([uf])=>{
     try{
       const r=await fetchResult('3',uf,force),official=r.candidatos.filter(c=>c.eleitoTse||c.situacaoOficial);
-      return{uf,ok:true,pct:r.pctTotalizado,md:r.meta.md,tf:r.meta.tf,updated:r.totalizadoEm,
+      return{uf,ok:true,pct:r.pctTotalizado,secoesTotal:r.secoesTotal,secoesTotalizadas:r.secoesTotalizadas,secoesNaoTotalizadas:r.secoesNaoTotalizadas,md:r.meta.md,tf:r.meta.tf,updated:r.totalizadoEm,
         leader:r.pctTotalizado>0?(r.candidatos[0]||null):null,
         official:official.map(c=>({...c,e:c.eleitoTse,st:c.situacaoOficial}))};
     }catch{return{uf,ok:false,pct:0,md:'n',tf:'n',official:[]}}
@@ -72,11 +72,11 @@ async function congressClient(force=false){
     ]);
     return{uf,cam,sen};
   });
-  const groups=new Map(),camOfficial=[];let seatsTotal=0,camLoaded=0,camPct=0;
-  const senParty=new Map(),senUfs=[];let senLoaded=0,senPct=0,officialCount=0;
+  const groups=new Map(),camOfficial=[];let seatsTotal=0,camLoaded=0,camPct=0,camSectionsTotal=0,camSectionsDone=0;
+  const senParty=new Map(),senUfs=[];let senLoaded=0,senPct=0,officialCount=0,senSectionsTotal=0,senSectionsDone=0;
   for(const x of pairs){
     if(x.cam){
-      camLoaded++;camPct+=x.cam.pctTotalizado;seatsTotal+=x.cam.vagas;
+      camLoaded++;camPct+=x.cam.pctTotalizado;seatsTotal+=x.cam.vagas;camSectionsTotal+=Number(x.cam.secoesTotal||0);camSectionsDone+=Number(x.cam.secoesTotalizadas||0);
       for(const g of x.cam.partidos){
         const key=g.sigla||g.nome,cur=groups.get(key)||{sigla:key,nome:g.nome||key,seats:0,votes:0};
         cur.seats+=Number(g.vagasOficiais||0);cur.votes+=Number(g.votosValidos||0);groups.set(key,cur);
@@ -84,7 +84,7 @@ async function congressClient(force=false){
       camOfficial.push(...x.cam.candidatos.filter(officialCandidate));
     }
     if(x.sen){
-      senLoaded++;senPct+=x.sen.pctTotalizado;
+      senLoaded++;senPct+=x.sen.pctTotalizado;senSectionsTotal+=Number(x.sen.secoesTotal||0);senSectionsDone+=Number(x.sen.secoesTotalizadas||0);
       const official=x.sen.candidatos.filter(officialCandidate).map(c=>({...c,official:true}));
       officialCount+=official.length;
       for(const c of official){
@@ -96,13 +96,22 @@ async function congressClient(force=false){
   }
   return{
     cam:{kind:'camara',updatedAt:new Date().toISOString(),ufsLoaded:camLoaded,ufsTotal:27,pctAverage:camLoaded?camPct/camLoaded:0,seatsTotal,
-      officialSeats:[...groups.values()].sort((a,b)=>b.seats-a.seats||b.votes-a.votes),officialElected:camOfficial},
+      sectionsTotal:camSectionsTotal,sectionsDone:camSectionsDone,pctSections:camSectionsTotal?camSectionsDone/camSectionsTotal*100:0,officialSeats:[...groups.values()].sort((a,b)=>b.seats-a.seats||b.votes-a.votes),officialElected:camOfficial},
     sen:{kind:'senado',updatedAt:new Date().toISOString(),ufsLoaded:senLoaded,ufsTotal:27,pctAverage:senLoaded?senPct/senLoaded:0,
-      seatsContested:54,officialCount,byParty:[...senParty.values()].sort((a,b)=>b.seats-a.seats),ufs:senUfs}
+      seatsContested:54,sectionsTotal:senSectionsTotal,sectionsDone:senSectionsDone,pctSections:senSectionsTotal?senSectionsDone/senSectionsTotal*100:0,officialCount,byParty:[...senParty.values()].sort((a,b)=>b.seats-a.seats),ufs:senUfs}
   };
 }
 
 function cachedRaw(cargo,uf='BR'){return S.cache.get(cargo+':'+uf)?.raw}
+function sectionsSummary(r){
+  const done=Number(r?.secoesTotalizadas||0),total=Number(r?.secoesTotal||0),remaining=Number(r?.secoesNaoTotalizadas||Math.max(0,total-done));
+  return{done,total,remaining,pct:Number(r?.pctTotalizado||0),label:`${fmt(done)} de ${fmt(total)} seções/urnas totalizadas`};
+}
+function sectionsBadge(r,compact=false){
+  const s=sectionsSummary(r);
+  if(!s.total)return '<span class="apuration-count">Aguardando contagem de seções</span>';
+  return `<div class="apuration-count ${compact?'compact':''}"><strong>${fmt(s.done)}</strong><span> de ${fmt(s.total)} seções/urnas</span><b>${pct(s.pct)}</b></div>`;
+}
 function updateLive(){
   const el=$('#liveTime'); if(!el)return;
   const t=S.lastRefresh?new Date(S.lastRefresh).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):'conectando';
@@ -201,6 +210,7 @@ async function loadAgora(force=false){
     <div class="hero-grid">
       <section class="card hero-card"><div class="section-head"><div><div class="eyebrow">Presidente · Brasil</div><div class="section-title">${esc(defined)}</div></div><button class="card-action" data-go="presidente">Detalhes <span>→</span></button></div>
         <div class="progress-row"><div class="progress"><span style="width:${clamp(pres.pctTotalizado)}%"></span></div><strong class="progress-pct">${pct(pres.pctTotalizado)}</strong></div>
+        ${sectionsBadge(pres)}
         ${electionAlert(pres,'1')}<div class="leader-grid">${renderLeaderCards(pres,'1',2)}</div>
       </section>
       <aside class="metric-stack">
@@ -217,7 +227,7 @@ function renderGovernorGrid(gov){
   if(!gov?.states)return UFS.map(([uf])=>`<button class="uf-card" data-uf="${uf}"><strong>${uf}</strong><span>abrir</span></button>`).join('');
   return gov.states.map(x=>{
     const c=x.official?.find(c=>c.e)||x.leader, label=x.md==='s'?'2º turno TSE':x.md==='e'?'eleito TSE':x.tf==='s'?'final':x.pct>0?(c?.nome||'apurando'):'aguardando';
-    return `<button class="uf-card" data-uf="${x.uf}"><strong>${x.uf}</strong><span class="${x.md==='e'||x.tf==='s'?'mini-status':''}">${esc(label)}</span><span>${pct(x.pct||0)}</span></button>`;
+    return `<button class="uf-card" data-uf="${x.uf}"><strong>${x.uf}</strong><span class="${x.md==='e'||x.tf==='s'?'mini-status':''}">${esc(label)}</span><span>${fmt(x.secoesTotalizadas||0)} / ${fmt(x.secoesTotal||0)}</span><span>${pct(x.pct||0)}</span></button>`;
   }).join('');
 }
 async function loadPresident(force=false){
@@ -225,7 +235,7 @@ async function loadPresident(force=false){
   const r=await fetchResult('1','BR',force);recordPresident(r);
   const official=officialSelected(r,'1');
   host.innerHTML=`
-  <div class="page-head"><div><div class="eyebrow">Brasil · 1º turno</div><h1 class="page-title">Presidente da República</h1><div class="page-sub">Ranking, situação oficial, votos e evolução da totalização.</div></div><div class="ring-wrap"><div class="ring" style="--p:${clamp(r.pctTotalizado)}%"><span>${pct(r.pctTotalizado)}</span></div><div class="ring-copy"><strong>seções totalizadas</strong><small>${esc(r.totalizadoEm||'aguardando')}</small></div></div></div>
+  <div class="page-head"><div><div class="eyebrow">Brasil · 1º turno</div><h1 class="page-title">Presidente da República</h1><div class="page-sub">Ranking, situação oficial, votos e evolução da totalização.</div></div><div class="ring-wrap"><div class="ring" style="--p:${clamp(r.pctTotalizado)}%"><span>${pct(r.pctTotalizado)}</span></div><div class="ring-copy"><strong>${fmt(r.secoesTotalizadas)} de ${fmt(r.secoesTotal)}</strong><small>seções/urnas totalizadas · ${esc(r.totalizadoEm||'aguardando')}</small></div></div></div>
   ${electionAlert(r,'1')}
   <div class="pres-grid section">
     <section class="card pad"><div class="section-head"><div><div class="eyebrow">Placar oficial</div><div class="section-title">Candidatos</div></div><div class="section-note">${r.candidatos.length} candidaturas</div></div><div class="candidate-list">${orderedCandidates(r).map((c,i)=>candidateRow(c,r,'1',i)).join('')}</div></section>
@@ -247,7 +257,7 @@ async function loadState(force=false){
   wireStateControls();
   const cargo=S.uf==='DF'&&S.cargo==='7'?'8':S.uf!=='DF'&&S.cargo==='8'?'7':S.cargo;S.cargo=cargo;
   const r=await fetchResult(cargo,S.uf,force);
-  host.innerHTML=`<div class="page-head"><div><div class="eyebrow">${esc(UF_NAME[S.uf])}</div><h1 class="page-title">${esc(CARGO[cargo])}</h1><div class="page-sub">${S.uf} · ${pct(r.pctTotalizado)} das seções totalizadas</div></div><div class="source-pill">TSE · ${esc(r.meta.dataGeracao||'')} ${esc(r.meta.horaGeracao||'')}</div></div>${buildStateToolbar()}${cargo==='3'||cargo==='5'?renderMajorState(r,cargo):renderProportional(r,cargo)}`;
+  host.innerHTML=`<div class="page-head"><div><div class="eyebrow">${esc(UF_NAME[S.uf])}</div><h1 class="page-title">${esc(CARGO[cargo])}</h1><div class="page-sub">${S.uf} · ${fmt(r.secoesTotalizadas)} de ${fmt(r.secoesTotal)} seções/urnas totalizadas · ${pct(r.pctTotalizado)}</div></div><div class="source-pill">TSE · ${esc(r.meta.dataGeracao||'')} ${esc(r.meta.horaGeracao||'')}</div></div>${buildStateToolbar()}<div class="state-apuration-strip">${sectionsBadge(r)}</div>${cargo==='3'||cargo==='5'?renderMajorState(r,cargo):renderProportional(r,cargo)}`;
   wireStateControls();wireProportionalCandidateRanking(host);syncFavoriteButtons();wireFavorites(host);
 }
 function wireStateControls(){
@@ -300,6 +310,7 @@ function renderProportional(r,cargo){
     <div class="card prop-metric"><span>QE oficial TSE</span><strong>${fmt(qeTse)}</strong><small>${qeTse?'publicado pelo TSE':'aguardando votos válidos'}</small></div>
     <div class="card prop-metric"><span>QE cálculo app</span><strong>${fmt(qeApp)}</strong><small>auditável com os dados atuais</small></div>
     <div class="card prop-metric"><span>Votos válidos</span><strong>${fmt(r.validos)}</strong><small>${pct(r.pctTotalizado)} apurado</small></div>
+    <div class="card prop-metric"><span>Seções/urnas totalizadas</span><strong>${fmt(r.secoesTotalizadas)}</strong><small>de ${fmt(r.secoesTotal)} · ${pct(r.pctTotalizado)}</small></div>
   </div>
   <div class="thresholds"><div class="threshold"><small>10% do QE · mínimo individual do QP</small><strong>${fmt(Math.ceil(qeApp*.10))}</strong></div><div class="threshold"><small>20% do QE · candidato na 1ª sobra</small><strong>${fmt(Math.ceil(qeApp*.20))}</strong></div><div class="threshold"><small>80% do QE · grupo na 1ª sobra</small><strong>${fmt(Math.ceil(qeApp*.80))}</strong></div></div>
   ${r.pctTotalizado===0?'<div class="alert waiting" style="margin-top:12px">As <strong>'+fmt(r.vagas)+' vagas</strong> já são conhecidas. QE, QP, sobras e distribuição de cadeiras permanecem em zero até o TSE publicar votos válidos.</div>':''}
@@ -343,7 +354,7 @@ async function loadCongress(force=false){
   <div class="page-head"><div><div class="eyebrow">Congresso Nacional</div><h1 class="page-title">Câmara e Senado</h1><div class="page-sub">Distribuição oficial atualizada UF por UF. Cadeiras ainda não atribuídas permanecem neutras.</div></div><div class="source-pill">${cam.ufsLoaded}/27 UFs carregadas</div></div>
   <div class="congress-top">
     <section class="card hemi-card"><div class="section-head"><div><div class="eyebrow">Câmara dos Deputados</div><div class="section-title">Hemiciclo · TSE agora</div></div><div class="section-note">${seats} de ${cam.seatsTotal||513} cadeiras atribuídas</div></div><div class="hemicycle-wrap">${createHemicycle(cam.officialSeats||[],cam.seatsTotal||513)}</div><div class="seat-legend">${(cam.officialSeats||[]).slice(0,14).map(x=>`<span><i class="legend-dot" style="display:inline-block;background:${hashColor(x.sigla)}"></i> ${esc(x.sigla)} ${x.seats}</span>`).join('')}</div></section>
-    <aside class="congress-side"><div class="card metric-card"><div class="metric-label">Cadeiras Câmara</div><div class="metric-value">${seats}<span style="font-size:14px;color:var(--muted)"> / ${cam.seatsTotal||513}</span></div><div class="metric-foot">campo vag agregado das 27 UFs</div></div><div class="card metric-card"><div class="metric-label">Senadores oficiais em 2026</div><div class="metric-value">${sen.officialCount||0}<span style="font-size:14px;color:var(--muted)"> / 54</span></div><div class="metric-foot">2 vagas por UF</div></div><div class="card pad"><div class="eyebrow">Cadeiras por grupo</div><div class="section-title">Distribuição atual</div><div style="margin-top:12px">${bars(cam.officialSeats||[])}</div></div></aside>
+    <aside class="congress-side"><div class="card metric-card"><div class="metric-label">Cadeiras Câmara</div><div class="metric-value">${seats}<span style="font-size:14px;color:var(--muted)"> / ${cam.seatsTotal||513}</span></div><div class="metric-foot">campo vag agregado das 27 UFs</div></div><div class="card metric-card"><div class="metric-label">Senadores oficiais em 2026</div><div class="metric-value">${sen.officialCount||0}<span style="font-size:14px;color:var(--muted)"> / 54</span></div><div class="metric-foot">2 vagas por UF</div></div><div class="card metric-card"><div class="metric-label">Seções/urnas totalizadas</div><div class="metric-value" style="font-size:20px">${fmt(cam.sectionsDone||0)} <span style="font-size:12px;color:var(--muted)">/ ${fmt(cam.sectionsTotal||0)}</span></div><div class="metric-foot">${pct(cam.pctSections||cam.pctAverage||0)} no agregado nacional</div></div><div class="card pad"><div class="eyebrow">Cadeiras por grupo</div><div class="section-title">Distribuição atual</div><div style="margin-top:12px">${bars(cam.officialSeats||[])}</div></div></aside>
   </div>
   <section class="section"><div class="section-head"><div><div class="eyebrow">Senado Federal</div><div class="section-title">Duas vagas por UF</div></div><div class="section-note">“líder” só vira “eleito TSE” quando o arquivo oficial indicar</div></div><div class="senate-grid">${renderSenateGrid(sen)}</div></section>
   <section class="section"><div class="two-col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div class="card pad"><div class="eyebrow">Câmara</div><div class="section-title">Tabela de cadeiras</div><div class="table-wrap"><table class="seat-table"><thead><tr><th>Partido/Federação</th><th>Votos</th><th>Cadeiras</th></tr></thead><tbody>${(cam.officialSeats||[]).map(x=>`<tr><td><strong>${esc(x.sigla)}</strong></td><td>${fmt(x.votes)}</td><td class="seat-big">${x.seats}</td></tr>`).join('')}</tbody></table></div></div><div class="card pad"><div class="eyebrow">Senado</div><div class="section-title">Eleitos por partido</div><div style="margin-top:12px">${sen.officialCount?bars(sen.byParty||[]):'<div class="empty">O TSE ainda não atribuiu senadores eleitos.</div>'}</div></div></div></section>`;
