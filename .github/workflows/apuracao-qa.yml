@@ -16,6 +16,7 @@ jobs:
       - name: JavaScript syntax
         run: |
           node --check apuracao-2026/app.js
+          node --check apuracao-2026/app.bundle.js
           node --check apuracao-2026/engine.js
           node --check apuracao-2026/api/search.js
           node --check apuracao-2026/api/congress.js
@@ -24,12 +25,12 @@ jobs:
 
       - name: Required features present
         run: |
-          grep -q "calcularProporcional" apuracao-2026/app.js
-          grep -q "createHemicycle" apuracao-2026/app.js
-          grep -q "ELEITO · TSE" apuracao-2026/app.js
-          grep -q "2º TURNO · TSE" apuracao-2026/app.js
-          grep -q "TSE agora" apuracao-2026/app.js
-          grep -q "A conta" apuracao-2026/app.js
+          grep -q "calcularProporcional" apuracao-2026/app.bundle.js
+          grep -q "createHemicycle" apuracao-2026/app.bundle.js
+          grep -q "ELEITO · TSE" apuracao-2026/app.bundle.js
+          grep -q "2º TURNO · TSE" apuracao-2026/app.bundle.js
+          grep -q "TSE agora" apuracao-2026/app.bundle.js
+          grep -q "A conta" apuracao-2026/app.bundle.js
           grep -q "Congresso" apuracao-2026/index.html
 
       - name: Live deployment smoke tests
@@ -37,7 +38,7 @@ jobs:
           set -e
           base="https://apuracao-2026-lake.vercel.app"
           curl -fsS --retry 3 "$base/" | grep -q "Apuração 2026"
-          curl -fsS --retry 3 "$base/app.js" | grep -q "calcularProporcional"
+          curl -fsS --retry 3 "$base/app.bundle.js?v=4.1" | grep -q "function orderedCandidates"
           curl -fsS --retry 3 "$base/api/search?q=ana%20paula%20siqueira&uf=mg&cargo=7" | grep -q "ANA PAULA SIQUEIRA"
           curl -fsS --retry 3 "$base/api/congress?kind=camara" | grep -q '"seatsTotal":513'
           curl -fsS --retry 3 "$base/api/congress?kind=senado" | grep -q '"seatsContested":54'
