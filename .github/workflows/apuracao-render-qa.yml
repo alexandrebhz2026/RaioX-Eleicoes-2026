@@ -30,12 +30,20 @@ jobs:
           grep -q "Apuração em tempo real" /tmp/apuracao-render.html
           grep -q "Governadores por UF" /tmp/apuracao-render.html
           grep -q "Favoritos" /tmp/apuracao-render.html
+          grep -q "Eleitos" /tmp/apuracao-render.html
           grep -q 'id="brmap"' /tmp/apuracao-render.html
           grep -q 'state_mg' /tmp/apuracao-render.html
           grep -q "governor-map-counters" /tmp/apuracao-render.html
           grep -q "seções/urnas" /tmp/apuracao-render.html
           grep -q "card-action" apuracao-2026/app.css
           grep -q "favorite-btn" apuracao-2026/app.css
+          grep -q "view-eleitos" apuracao-2026/index.html
+          grep -q "FAVORITE_HISTORY_KEY" apuracao-2026/app.bundle.js
+          grep -q "createStateShareImage" apuracao-2026/app.bundle.js
+          grep -q "openStateQuickSummary" apuracao-2026/app.bundle.js
+          grep -q "liveEventsPanel" apuracao-2026/app.bundle.js
+          grep -q "Linha de corte" apuracao-2026/app.bundle.js
+          grep -q "async function loadElected" apuracao-2026/app.bundle.js
           grep -q "governorMapPanel" apuracao-2026/app.bundle.js
           grep -q "candidate-projected-elected" apuracao-2026/app.bundle.js
           grep -q "Projetado eleito · cálculo atual" apuracao-2026/app.bundle.js
