@@ -32,6 +32,9 @@ jobs:
           grep -q "TSE agora" apuracao-2026/app.bundle.js
           grep -q "A conta" apuracao-2026/app.bundle.js
           grep -q "Congresso" apuracao-2026/index.html
+          grep -q "Favoritos" apuracao-2026/index.html
+          grep -q "function renderFavoritesPage" apuracao-2026/app.bundle.js
+          grep -q "favoriteButton" apuracao-2026/app.bundle.js
           grep -q "loadFavoritesView" apuracao-2026/app.bundle.js
           grep -q 'data-view="favoritos"' apuracao-2026/index.html
           grep -q "favorite-btn" apuracao-2026/app.css
@@ -46,13 +49,14 @@ jobs:
           "$browser" --headless --no-sandbox --disable-gpu --virtual-time-budget=12000 --dump-dom "$base/?qa=$GITHUB_SHA" > /tmp/apuracao-dom.html
           grep -q "Apuração em tempo real" /tmp/apuracao-dom.html
           grep -q "Governadores por UF" /tmp/apuracao-dom.html
+          grep -q "Favoritos" /tmp/apuracao-dom.html
 
       - name: Live deployment smoke tests
         run: |
           set -e
           base="https://apuracao-2026-lake.vercel.app"
           curl -fsS --retry 3 "$base/" | grep -q "Apuração 2026"
-          curl -fsS --retry 3 "$base/app.bundle.js?v=4.3" | grep -q "function orderedCandidates"
+          curl -fsS --retry 3 "$base/app.bundle.js?v=4.4" | grep -q "function orderedCandidates"
           curl -fsS --retry 3 "$base/api/search?q=ana%20paula%20siqueira&uf=mg&cargo=7" | grep -q "ANA PAULA SIQUEIRA"
           curl -fsS --retry 3 "$base/api/congress?kind=camara" | grep -q '"seatsTotal":513'
           curl -fsS --retry 3 "$base/api/congress?kind=senado" | grep -q '"seatsContested":54'
