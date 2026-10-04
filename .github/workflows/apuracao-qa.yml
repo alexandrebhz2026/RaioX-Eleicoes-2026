@@ -34,8 +34,9 @@ jobs:
           grep -q "Congresso" apuracao-2026/index.html
           grep -q "Favoritos" apuracao-2026/index.html
           grep -q "function renderFavoritesPage" apuracao-2026/app.bundle.js
+          grep -q "async function loadFavorites" apuracao-2026/app.bundle.js
+          grep -q "function refreshFavorites" apuracao-2026/app.bundle.js
           grep -q "favoriteButton" apuracao-2026/app.bundle.js
-          grep -q "loadFavoritesView" apuracao-2026/app.bundle.js
           grep -q 'data-view="favoritos"' apuracao-2026/index.html
           grep -q "favorite-btn" apuracao-2026/app.css
           grep -q "card-action" apuracao-2026/app.css
