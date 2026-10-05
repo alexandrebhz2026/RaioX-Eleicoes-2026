@@ -304,7 +304,7 @@ function secondRoundHomeCallout(pres,gov){
   </section>`;
 }
 function wireSecondRoundHome(){
-  $('[data-open-president]').forEach(b=>b.onclick=()=>{S.presidentMode=b.dataset.presidentMode||'round2';showView('presidente')});
+  $$('[data-open-president]').forEach(b=>b.onclick=()=>{S.presidentMode=b.dataset.presidentMode||'round2';showView('presidente')});
 }
 async function loadSecondRoundHome(host,force=false){
   const [r1,r2,gov]=await Promise.all([
@@ -588,7 +588,7 @@ function presidentModeTabs(active){
   </div>`;
 }
 function wirePresidentModeTabs(){
-  $('[data-president-mode]').forEach(b=>b.onclick=()=>{
+  $$('[data-president-mode]').forEach(b=>b.onclick=()=>{
     S.presidentMode=b.dataset.presidentMode;
     showView('presidente');
   });
@@ -682,7 +682,7 @@ async function openRound2Governor(uf){
   syncFavoriteButtons();wireFavorites(body);
 }
 function wireRound2GovernorCards(){
-  $('[data-round2-uf]').forEach(b=>b.onclick=()=>openRound2Governor(b.dataset.round2Uf));
+  $$('[data-round2-uf]').forEach(b=>b.onclick=()=>openRound2Governor(b.dataset.round2Uf));
 }
 async function renderSecondRoundPresident(host,r1,force=false){
   const gov=S.governors&&!force?S.governors:await governorSummaryClient(force);
