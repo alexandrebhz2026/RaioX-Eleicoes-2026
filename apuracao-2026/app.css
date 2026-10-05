@@ -494,3 +494,47 @@ body,.appbar,.appbar-in,.shell,.view,.section,.page-head,.card,.congress-top,.co
 .elected-candidate-card.official-card-orange{background:color-mix(in srgb,var(--warning) 17%,var(--surface))!important}
 .favorite-page-card.projected-card-green,
 .elected-candidate-card.projected-card-green{background:color-mix(in srgb,var(--success) 8%,var(--surface))!important}
+
+/* Second round + polls v5.7 */
+.president-mode-tabs{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 14px}
+.president-mode-tabs .seg{border:1px solid var(--border);background:var(--surface2);color:var(--muted);padding:9px 13px;border-radius:999px;font-weight:900;font-size:10px}
+.president-mode-tabs .seg.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.round2-home-callout{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px 17px;margin-bottom:14px;background:linear-gradient(135deg,color-mix(in srgb,var(--warning) 14%,var(--surface)),var(--surface));border-color:color-mix(in srgb,var(--warning) 35%,var(--border))}
+.round2-home-copy{min-width:0}.round2-home-copy h2{font-size:20px;margin:3px 0 4px;line-height:1.15}.round2-home-copy p{margin:0;color:var(--muted);font-size:10px}
+.round2-home-actions{display:flex;gap:7px;flex:0 0 auto}
+.round2-countdown{display:flex;flex-direction:column;align-items:flex-end;padding:10px 13px;border-radius:15px;background:color-mix(in srgb,var(--warning) 11%,var(--surface));border:1px solid color-mix(in srgb,var(--warning) 35%,var(--border))}
+.round2-countdown span{font-size:9px;color:var(--muted);font-weight:800}.round2-countdown strong{font-size:21px;color:var(--warning);margin-top:3px}
+.round2-hero,.round2-live-home{padding:16px}
+.round2-prep-note{padding:11px 12px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:10px;line-height:1.45;margin-bottom:12px}
+.round2-faceoff{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.round2-candidate{display:grid;grid-template-columns:68px minmax(0,1fr) auto;gap:10px;align-items:center;padding:13px;border-radius:17px;background:var(--surface2);border:1px solid var(--border);min-width:0}
+.round2-candidate .avatar.large{width:68px;height:68px}
+.round2-candidate-main{min-width:0}.round2-candidate-main h3{margin:2px 0 4px;font-size:16px;line-height:1.1}.round2-votes{font-size:10px;color:var(--muted)}.round2-votes strong{color:var(--text)}.round2-votes b{color:var(--accent)}.round2-candidate-main>small{display:block;color:var(--muted);font-size:9px;margin:4px 0}
+.round2-star{align-self:start}
+.round2-difference{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:11px;padding:10px 12px;border:1px solid var(--border);border-radius:13px;background:var(--surface)}
+.round2-difference span{font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:900}.round2-difference strong{font-size:17px}.round2-difference small{color:var(--muted);font-size:9px}
+.round2-state-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.round2-state-card{min-width:0;border:1px solid color-mix(in srgb,var(--warning) 36%,var(--border));background:color-mix(in srgb,var(--warning) 10%,var(--surface));color:var(--text);padding:12px;border-radius:14px;text-align:left}
+.round2-state-card strong,.round2-state-card span,.round2-state-card small,.round2-state-card b{display:block}.round2-state-card strong{font-size:18px}.round2-state-card span{font-size:9px;color:var(--warning);font-weight:900;margin-top:2px}.round2-state-card small{font-size:8px;color:var(--muted);margin-top:5px}.round2-state-card b{font-size:9px;color:var(--accent);margin-top:7px}
+.round2-modal-candidates{display:grid;gap:8px;margin-top:12px}
+
+.poll-context-card{padding:12px 14px;margin-bottom:12px;display:flex;gap:9px;align-items:flex-start}.poll-context-card strong{font-size:10px;color:var(--accent)}.poll-context-card span{font-size:10px;color:var(--muted);line-height:1.4}
+.polls-head-note{padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--surface2);color:var(--muted);font-size:10px;line-height:1.45;margin-bottom:10px}
+.poll-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.poll-card{min-width:0;border:1px solid var(--border);background:var(--surface);border-radius:17px;padding:13px}
+.poll-card-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.poll-card-head strong{display:block;font-size:12px;margin-top:2px}.poll-phase{font-size:8px;padding:4px 7px;border-radius:999px;background:var(--surface2);color:var(--muted);white-space:nowrap}
+.poll-bars{display:grid;gap:9px;margin-top:12px}.poll-row-head{display:flex;justify-content:space-between;gap:8px;font-size:10px}.poll-row-head small{color:var(--muted)}.poll-row-head strong{font-size:14px}
+.poll-track{height:9px;border-radius:999px;background:var(--surface2);overflow:hidden;border:1px solid var(--border)}.poll-track span{display:block;height:100%;border-radius:999px}.poll-track .a{background:var(--accent)}.poll-track .b{background:color-mix(in srgb,var(--accent) 55%,var(--warning))}
+.poll-other{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}.poll-other span{font-size:8px;color:var(--muted);padding:4px 6px;border-radius:8px;background:var(--surface2)}.poll-other b{color:var(--text)}
+.poll-meta{display:flex;gap:5px;flex-wrap:wrap;margin-top:10px}.poll-meta span{font-size:8px;color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:4px 6px}
+.poll-source-link{display:inline-flex;margin-top:10px;color:var(--accent);font-size:9px;font-weight:900;text-decoration:none}
+
+@media(max-width:760px){
+  .round2-home-callout{align-items:stretch;flex-direction:column}.round2-home-actions{width:100%}.round2-home-actions>*{flex:1}
+  .round2-faceoff{grid-template-columns:1fr}.round2-state-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .poll-grid{grid-template-columns:1fr}.round2-countdown{align-items:flex-start}
+}
+@media(max-width:420px){
+  .round2-candidate{grid-template-columns:58px minmax(0,1fr) 42px;padding:11px}.round2-candidate .avatar.large{width:58px;height:58px}.round2-candidate-main h3{font-size:14px}
+  .round2-state-grid{grid-template-columns:1fr}.president-mode-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.president-mode-tabs .seg{padding:9px 7px}
+}
