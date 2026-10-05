@@ -55,6 +55,10 @@ jobs:
           grep -q "polls-2026.json" apuracao-2026/app.bundle.js
           grep -q "loadSecondRoundHome" apuracao-2026/app.bundle.js
           grep -q "renderSecondRoundPresident" apuracao-2026/app.bundle.js
+          if grep -Pq 'async[ \t]*\n[ \t]*function' apuracao-2026/app.bundle.js; then
+            echo "FAILED: stray async before function declaration"
+            exit 1
+          fi
           grep -q "view-eleitos" apuracao-2026/index.html
           grep -q "FAVORITE_HISTORY_KEY" apuracao-2026/app.bundle.js
           grep -q "createStateShareImage" apuracao-2026/app.bundle.js
