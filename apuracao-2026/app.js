@@ -8,7 +8,7 @@ const CARGO={'1':'Presidente','3':'Governador','5':'Senador','6':'Deputado Feder
 const COLORS=['#7c3aed','#2563eb','#0891b2','#0f9f6e','#d97706','#db2777','#4f46e5','#65a30d','#ea580c','#9333ea','#0284c7','#059669','#ca8a04','#be123c','#6366f1','#15803d','#c2410c','#a21caf'];
 const S={
   codes:{fed:'6257',est:'6259',fed2:null,est2:null},view:'agora',uf:'MG',cargo:'3',cache:new Map(),governors:null,
-  congress:{camara:null,senado:null},poll:null,loading:new Set(),lastRefresh:null,candidateIndex:new Map(),electedMode:'official',electedUf:'MG',electedCargo:'all',electedName:'',electedParty:'all',electedChartMode:'party',
+  congress:{camara:null,senado:null},poll:null,loading:new Set(),lastRefresh:null,candidateIndex:new Map(),electedMode:'official',electedUf:'MG',electedCargo:'all',electedName:'',electedParty:'all',electedChartMode:'party',stateDeputyName:'',stateDeputyParty:'all',
   presidentMode:'auto',pollData:null,pollScope:'BR',round2Ready:false
 };
 const API_BASE=location.hostname.endsWith('.vercel.app')?'':'https://apuracao-2026-lake.vercel.app';
@@ -311,7 +311,7 @@ function candidateRow(c,r,cargo,index,opts={}){
   const projected=deputy&&!!opts.projected&&!state.elected;
   const rowClass=state.elected?' candidate-official-elected':state.runoff?' candidate-official-runoff':projected?' candidate-projected-elected':'';
   const projectionBadge=projected?'<span class="projection-badge">Projetado eleito · cálculo atual</span>':'';
-  return `<div class="candidate-row${rowClass}">
+  return `<div class="candidate-row${rowClass}" data-candidate-name="${esc(c.nome||'')}" data-candidate-party="${esc(c.partido||'')}" data-candidate-federation="${esc(c.federacao||'')}" data-candidate-cargo="${esc(String(cargo||c.cargoCodigo||''))}">
     <div class="rank">${index+1}º</div>${avatar(c)}
     <div><div class="cand-name">${esc(c.nome)}</div><div class="cand-meta">${esc(c.numero)} · ${esc(c.partido)} · ${fmt(c.votos)} votos</div>
       <div class="vote-bar"><span style="width:${clamp(c.pct)}%"></span></div>${oi?`<span class="${oi.cls}">${esc(oi.label)}</span>`:''}${projectionBadge}
@@ -861,17 +861,87 @@ function buildStateToolbar(){
   return `<div class="state-toolbar"><div class="select-group"><label>UF</label><select id="ufSelect" class="select">${opts}</select></div><div class="section-note">Fonte: arquivo unificado EA20 do TSE</div></div>
   <div class="cargo-tabs"><button class="cargo-tab ${S.cargo==='3'?'active':''}" data-cargo="3">Governador</button><button class="cargo-tab ${S.cargo==='5'?'active':''}" data-cargo="5">Senado</button><button class="cargo-tab ${S.cargo==='6'?'active':''}" data-cargo="6">Dep. Federal</button><button class="cargo-tab ${S.cargo===dep[0]?'active':''}" data-cargo="${dep[0]}">Dep. ${dep[1]}</button></div>`;
 }
+function stateDeputyFilterOptions(r){
+  const parties=[...new Set((r?.candidatos||[]).map(c=>c.partido).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const groups=[...new Set((r?.candidatos||[]).map(c=>c.federacao||c.partido).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const federations=groups.filter(g=>!parties.includes(g));
+  return{parties,groups,federations};
+}
+function renderStateDeputyFilters(r,cargo){
+  if(!['6','7','8'].includes(String(cargo)))return'';
+  const {parties,federations}=stateDeputyFilterOptions(r);
+  return `<section class="card state-deputy-filters">
+    <div class="state-deputy-filter-head"><div><div class="eyebrow">Filtros de deputados</div><strong>Encontre por nome ou partido</strong></div><span>${fmt((r.candidatos||[]).length)} candidaturas</span></div>
+    <div class="state-deputy-filter-grid">
+      <label class="deputy-search-wrap"><span aria-hidden="true">⌕</span><input id="stateDeputyNameFilter" type="search" autocomplete="off" placeholder="Digite o nome do deputado" value="${esc(S.stateDeputyName||'')}" aria-label="Buscar deputado pelo nome"></label>
+      <select id="stateDeputyPartyFilter" class="select" aria-label="Filtrar deputados por partido ou federação">
+        <option value="all">Todos os partidos/federações</option>
+        <optgroup label="Partidos">${parties.map(p=>`<option value="party|${esc(p)}" ${S.stateDeputyParty===`party|${p}`?'selected':''}>${esc(p)}</option>`).join('')}</optgroup>
+        ${federations.length?`<optgroup label="Federações / grupos">${federations.map(g=>`<option value="group|${esc(g)}" ${S.stateDeputyParty===`group|${g}`?'selected':''}>${esc(g)}</option>`).join('')}</optgroup>`:''}
+      </select>
+      <button id="clearStateDeputyFilters" class="ghost-btn deputy-clear-btn" type="button">Limpar</button>
+    </div>
+    <div id="stateDeputyFilterStatus" class="state-deputy-filter-status">Mostrando todos os candidatos.</div>
+  </section>`;
+}
+function wireStateDeputyFilters(host){
+  const panel=host?.querySelector('.state-deputy-filters');
+  const card=host?.querySelector('.prop-candidates-card');
+  if(!panel||!card)return;
+  const input=panel.querySelector('#stateDeputyNameFilter');
+  const select=panel.querySelector('#stateDeputyPartyFilter');
+  const clear=panel.querySelector('#clearStateDeputyFilters');
+  const status=panel.querySelector('#stateDeputyFilterStatus');
+  const mainList=card.querySelector(':scope > .candidate-list');
+  const more=card.querySelector('.prop-candidate-more');
+  const showAll=card.querySelector('[data-show-prop-all]');
+  const rows=[...card.querySelectorAll('.candidate-row')];
+  const total=rows.length;
+  const empty=document.createElement('div');
+  empty.className='empty state-deputy-filter-empty hidden';
+  empty.textContent='Nenhum candidato encontrado com estes filtros.';
+  card.appendChild(empty);
+
+  const matchesParty=row=>{
+    if(S.stateDeputyParty==='all')return true;
+    const raw=String(S.stateDeputyParty),party=row.dataset.candidateParty||'',group=row.dataset.candidateFederation||party;
+    if(raw.startsWith('party|'))return party===raw.slice(6);
+    if(raw.startsWith('group|'))return group===raw.slice(6);
+    return true;
+  };
+  const apply=()=>{
+    const q=normalizeElectedSearch(S.stateDeputyName);
+    const active=!!q||S.stateDeputyParty!=='all';
+    let visible=0;
+    rows.forEach(row=>{
+      const show=(!q||normalizeElectedSearch(row.dataset.candidateName||'').includes(q))&&matchesParty(row);
+      row.hidden=!show;if(show)visible++;
+    });
+    if(more)more.classList.toggle('hidden',!active);
+    if(showAll)showAll.classList.toggle('hidden',active);
+    if(mainList)mainList.classList.toggle('filtering',active);
+    empty.classList.toggle('hidden',visible!==0);
+    clear.disabled=!active;
+    if(status)status.textContent=active?`${fmt(visible)} de ${fmt(total)} candidatura(s) encontrada(s).`:'Mostrando todos os candidatos.';
+    const note=card.querySelector('.section-note');
+    if(note)note.textContent=active?`${fmt(visible)} resultado(s)`:`${fmt(total)} candidaturas · ordem atual do TSE`;
+  };
+  input.addEventListener('input',e=>{S.stateDeputyName=e.target.value;apply()});
+  select.addEventListener('change',e=>{S.stateDeputyParty=e.target.value;apply()});
+  clear.addEventListener('click',()=>{S.stateDeputyName='';S.stateDeputyParty='all';input.value='';select.value='all';apply();input.focus()});
+  apply();
+}
 async function loadState(force=false){
   const host=$('#stateContent');host.innerHTML=`<div class="page-head"><div><div class="eyebrow">Resultados por UF</div><h1 class="page-title">Estados</h1></div></div>${buildStateToolbar()}<div class="card pad loading"><div class="empty">Carregando ${esc(CARGO[S.cargo])} · ${S.uf}…</div></div>`;
   wireStateControls();
   const cargo=S.uf==='DF'&&S.cargo==='7'?'8':S.uf!=='DF'&&S.cargo==='8'?'7':S.cargo;S.cargo=cargo;
   const r=await fetchResult(cargo,S.uf,force);
-  host.innerHTML=`<div class="page-head"><div><div class="eyebrow">${esc(UF_NAME[S.uf])}</div><h1 class="page-title">${esc(CARGO[cargo])}</h1><div class="page-sub">${S.uf} · ${fmt(r.secoesTotalizadas)} de ${fmt(r.secoesTotal)} seções/urnas totalizadas · ${pct(r.pctTotalizado)}</div></div><div class="source-pill">TSE · ${esc(r.meta.dataGeracao||'')} ${esc(r.meta.horaGeracao||'')}</div></div>${buildStateToolbar()}<div class="state-apuration-strip">${sectionsBadge(r)}</div>${cargo==='3'||cargo==='5'?renderMajorState(r,cargo):renderProportional(r,cargo)}`;
-  wireStateControls();wireProportionalCandidateRanking(host);syncFavoriteButtons();wireFavorites(host);
+  host.innerHTML=`<div class="page-head"><div><div class="eyebrow">${esc(UF_NAME[S.uf])}</div><h1 class="page-title">${esc(CARGO[cargo])}</h1><div class="page-sub">${S.uf} · ${fmt(r.secoesTotalizadas)} de ${fmt(r.secoesTotal)} seções/urnas totalizadas · ${pct(r.pctTotalizado)}</div></div><div class="source-pill">TSE · ${esc(r.meta.dataGeracao||'')} ${esc(r.meta.horaGeracao||'')}</div></div>${buildStateToolbar()}${renderStateDeputyFilters(r,cargo)}<div class="state-apuration-strip">${sectionsBadge(r)}</div>${cargo==='3'||cargo==='5'?renderMajorState(r,cargo):renderProportional(r,cargo)}`;
+  wireStateControls();wireStateDeputyFilters(host);wireProportionalCandidateRanking(host);syncFavoriteButtons();wireFavorites(host);
 }
 function wireStateControls(){
-  const sel=$('#ufSelect');if(sel)sel.onchange=()=>{S.uf=sel.value;if(S.uf==='DF'&&S.cargo==='7')S.cargo='8';if(S.uf!=='DF'&&S.cargo==='8')S.cargo='7';loadState(true)};
-  $$('.cargo-tab').forEach(b=>b.onclick=()=>{S.cargo=b.dataset.cargo;loadState(true)});
+  const sel=$('#ufSelect');if(sel)sel.onchange=()=>{S.uf=sel.value;S.stateDeputyName='';S.stateDeputyParty='all';if(S.uf==='DF'&&S.cargo==='7')S.cargo='8';if(S.uf!=='DF'&&S.cargo==='8')S.cargo='7';loadState(true)};
+  $('.cargo-tab').forEach(b=>b.onclick=()=>{S.cargo=b.dataset.cargo;S.stateDeputyName='';S.stateDeputyParty='all';loadState(true)});
 }
 function renderMajorState(r,cargo){
   const isSen=cargo==='5',official=officialSelected(r,cargo);
@@ -892,7 +962,7 @@ function renderProportionalCandidateRanking(r,cargo,calc){
   const rows=first.map((c,i)=>candidateRow(c,r,cargo,i,{projected:isProjected(c)})).join('');
   const extra=rest.length?`<div class="candidate-list prop-candidate-more hidden">${rest.map((c,i)=>candidateRow(c,r,cargo,i+80,{projected:isProjected(c)})).join('')}</div>
     <button class="modern-link-btn prop-show-all" data-show-prop-all type="button">Mostrar todos os ${fmt(list.length)} candidatos <span>↓</span></button>`:'';
-  return `<section class="card pad section prop-candidates-card">
+  return `<section class="card pad section prop-candidates-card" data-total-candidates="${fmt(list.length)}">
     <div class="section-head"><div><div class="eyebrow">Votação nominal</div><div class="section-title">Candidatos e votos</div></div><div class="section-note">${fmt(list.length)} candidaturas · ordem atual do TSE</div></div>
     <div class="projection-legend">
       <span class="projection-legend-item official"><i></i><b>Eleito TSE</b><small>situação oficial</small></span>
@@ -1021,7 +1091,7 @@ function electedCandidateCard(c,{cargo='',uf='',kind='official',status='',reason
   const shownStatus=status||(kind==='official'?'ELEITO TSE':'PROJETADO ELEITO · cálculo atual');
   const visual=visualClassFromStatus(shownStatus,kind);
   const pColor=partyColor(c.partido||'');
-  return `<div class="elected-candidate-card${visual}" style="--party-color:${pColor}" data-candidate-name="${esc(c.nome)}" data-candidate-party="${esc(c.partido||'')}" data-candidate-federation="${esc(c.federacao||'')}">
+  return `<div class="elected-candidate-card${visual}" style="--party-color:${pColor}" data-candidate-name="${esc(c.nome)}" data-candidate-party="${esc(c.partido||'')}" data-candidate-federation="${esc(c.federacao||'')}" data-candidate-cargo="${esc(String(cargo||c.cargoCodigo||''))}">
     ${avatar(c)}
     <div class="elected-candidate-main"><div class="result-context">${esc(CARGO[String(cargo||c.cargoCodigo)]||'Candidato')} · ${esc(uf||c.uf||'')}</div><div class="cand-name">${esc(c.nome)}</div><div class="cand-meta">${esc(c.numero)} · ${fmt(c.votos)} votos</div>
       <div class="elected-card-tags"><span class="elected-party-chip"><i></i>${esc(c.partido||'Partido')}</span>${c.federacao?`<span class="elected-federation-chip">${esc(c.federacao)}</span>`:''}</div>
@@ -1051,13 +1121,17 @@ function normalizeElectedSearch(v){
   return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 }
 function enhanceDeputyElectedView(){
-  const cargo=String(S.electedCargo||'');
-  if(!['6','7','8'].includes(cargo))return;
-  const controls=$('#electedContent .elected-controls');
-  const section=$('#electedContent .elected-section');
-  const list=section?.querySelector('.elected-list');
-  if(!controls||!section||!list)return;
-  const cards=[...list.querySelectorAll('.elected-candidate-card')];
+  const cargo=String(S.electedCargo||'all');
+  if(!(cargo==='all'||['6','7','8'].includes(cargo)))return;
+  const host=$('#electedContent');
+  const controls=host?.querySelector('.elected-controls');
+  if(!host||!controls)return;
+
+  const sections=[...host.querySelectorAll('.elected-section')];
+  const cards=[...host.querySelectorAll('.elected-candidate-card')].filter(card=>{
+    const cc=String(card.dataset.candidateCargo||'');
+    return ['6','7','8'].includes(cc)&&(cargo==='all'||cc===cargo);
+  });
   if(!cards.length)return;
 
   const rows=cards.map(card=>{
@@ -1065,6 +1139,7 @@ function enhanceDeputyElectedView(){
     const federation=card.dataset.candidateFederation||'';
     return{
       card,
+      section:card.closest('.elected-section'),
       name:card.dataset.candidateName||card.querySelector('.cand-name')?.textContent||'',
       party,
       federation,
@@ -1074,7 +1149,6 @@ function enhanceDeputyElectedView(){
   const parties=[...new Set(rows.map(x=>x.party).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
   const groups=[...new Set(rows.map(x=>x.group).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
   const federations=groups.filter(g=>!parties.includes(g));
-
   const validFilter=S.electedParty==='all'||
     (String(S.electedParty).startsWith('party|')&&parties.includes(String(S.electedParty).slice(6)))||
     (String(S.electedParty).startsWith('group|')&&groups.includes(String(S.electedParty).slice(6)));
@@ -1082,29 +1156,35 @@ function enhanceDeputyElectedView(){
 
   const tools=document.createElement('div');
   tools.className='deputy-elected-tools';
-  tools.innerHTML=`<label class="deputy-search-wrap"><span aria-hidden="true">⌕</span><input id="electedNameFilter" type="search" autocomplete="off" placeholder="Buscar deputado pelo nome" value="${esc(S.electedName||'')}" aria-label="Buscar deputado pelo nome"></label>
+  tools.innerHTML=`<div class="deputy-filter-title"><strong>Filtrar deputados</strong><span>nome + partido/federação</span></div>
+    <label class="deputy-search-wrap"><span aria-hidden="true">⌕</span><input id="electedNameFilter" type="search" autocomplete="off" placeholder="Buscar deputado pelo nome" value="${esc(S.electedName||'')}" aria-label="Buscar deputado pelo nome"></label>
     <select id="electedPartyFilter" class="select" aria-label="Filtrar deputados por partido ou federação">
       <option value="all">Todos os partidos/federações</option>
-      <optgroup label="Partidos">
-        ${parties.map(p=>`<option value="party|${esc(p)}" ${S.electedParty===`party|${p}`?'selected':''}>${esc(p)}</option>`).join('')}
-      </optgroup>
+      <optgroup label="Partidos">${parties.map(p=>`<option value="party|${esc(p)}" ${S.electedParty===`party|${p}`?'selected':''}>${esc(p)}</option>`).join('')}</optgroup>
       ${federations.length?`<optgroup label="Federações / grupos">${federations.map(g=>`<option value="group|${esc(g)}" ${S.electedParty===`group|${g}`?'selected':''}>${esc(g)}</option>`).join('')}</optgroup>`:''}
     </select>
     <button id="clearDeputyFilters" class="ghost-btn deputy-clear-btn" type="button">Limpar</button>`;
   controls.appendChild(tools);
 
+  const firstDeputySection=rows[0].section;
   const summary=document.createElement('section');
   summary.className='card deputy-party-card';
-  section.parentNode.insertBefore(summary,section);
+  firstDeputySection?.parentNode?.insertBefore(summary,firstDeputySection);
+
+  const noResults=document.createElement('div');
+  noResults.className='card pad deputy-global-empty hidden';
+  noResults.innerHTML='<div class="empty">Nenhum deputado encontrado com estes filtros.</div>';
+  summary.insertAdjacentElement('afterend',noResults);
 
   const nameInput=tools.querySelector('#electedNameFilter');
   const partySelect=tools.querySelector('#electedPartyFilter');
   const clearBtn=tools.querySelector('#clearDeputyFilters');
-  const empty=document.createElement('div');
-  empty.className='empty deputy-filter-empty';
-  empty.textContent='Nenhum deputado encontrado com estes filtros.';
-  empty.hidden=true;
-  list.appendChild(empty);
+  const overallTotal=$('#electedContent .elected-total strong');
+  const originalOverall=overallTotal?.textContent||'';
+  sections.forEach(sec=>{
+    const note=sec.querySelector('.section-note');
+    if(note&&!sec.dataset.originalNote)sec.dataset.originalNote=note.textContent||'';
+  });
 
   const filterMatches=x=>{
     if(S.electedParty==='all')return true;
@@ -1116,27 +1196,32 @@ function enhanceDeputyElectedView(){
 
   const apply=()=>{
     const q=normalizeElectedSearch(S.electedName);
+    const active=!!q||S.electedParty!=='all';
     let visible=0;
-    for(const x of rows){
-      const okName=!q||normalizeElectedSearch(x.name).includes(q);
-      const show=okName&&filterMatches(x);
+    rows.forEach(x=>{
+      const show=(!q||normalizeElectedSearch(x.name).includes(q))&&filterMatches(x);
       x.card.hidden=!show;
       if(show)visible++;
-    }
-    empty.hidden=visible!==0;
-    const note=section.querySelector('.section-note');
-    if(note)note.textContent=`${fmt(visible)} resultado(s)`;
-    const total=$('#electedContent .elected-total strong');
-    if(total)total.textContent=fmt(visible);
-    clearBtn.disabled=!(S.electedName||S.electedParty!=='all');
+    });
+
+    sections.forEach(sec=>{
+      const secRows=rows.filter(x=>x.section===sec);
+      const note=sec.querySelector('.section-note');
+      if(!secRows.length){
+        if(cargo==='all')sec.hidden=active;
+        return;
+      }
+      const shown=secRows.filter(x=>!x.card.hidden).length;
+      sec.hidden=active&&shown===0;
+      if(note)note.textContent=active?`${fmt(shown)} resultado(s)`:(sec.dataset.originalNote||note.textContent);
+    });
+
+    if(overallTotal)overallTotal.textContent=active?fmt(visible):originalOverall;
+    noResults.classList.toggle('hidden',!(active&&visible===0));
+    clearBtn.disabled=!active;
     summary.querySelectorAll('[data-party-bar]').forEach(b=>{
-      const mode=b.dataset.chartMode;
-      const key=b.dataset.partyBar;
-      const current=S.electedParty;
-      b.classList.toggle('active',
-        (mode==='party'&&current===`party|${key}`)||
-        (mode==='group'&&current===`group|${key}`)
-      );
+      const mode=b.dataset.chartMode,key=b.dataset.partyBar,current=S.electedParty;
+      b.classList.toggle('active',(mode==='party'&&current===`party|${key}`)||(mode==='group'&&current===`group|${key}`));
     });
   };
 
@@ -1144,14 +1229,11 @@ function enhanceDeputyElectedView(){
     const chartMode=S.electedChartMode==='group'?'group':'party';
     const field=chartMode==='group'?'group':'party';
     const counts=new Map();
-    for(const x of rows)counts.set(x[field],(counts.get(x[field])||0)+1);
+    rows.forEach(x=>counts.set(x[field],(counts.get(x[field])||0)+1));
     const distribution=[...counts.entries()].map(([label,seats])=>({label,seats})).sort((a,b)=>b.seats-a.seats||a.label.localeCompare(b.label,'pt-BR'));
     const max=Math.max(1,...distribution.map(x=>x.seats));
-    const title=chartMode==='group'?'Cadeiras por partido/federação':'Cadeiras por partido';
-    const sub=chartMode==='group'
-      ?'Agrupa as bancadas pelo grupo proporcional informado pelo TSE.'
-      :'Mostra quantos deputados de cada partido estão dentro das vagas neste recorte.';
-    summary.innerHTML=`<div class="section-head deputy-party-head"><div><div class="eyebrow">Distribuição das vagas</div><div class="section-title">${title}</div><div class="deputy-party-sub">${sub}</div></div><div class="section-note">${fmt(rows.length)} vagas · ${fmt(distribution.length)} grupo(s)</div></div>
+    const cargoLabel=cargo==='all'?'deputados federais + estaduais/distritais':String(CARGO[cargo]||'deputados').toLowerCase();
+    summary.innerHTML=`<div class="section-head deputy-party-head"><div><div class="eyebrow">Distribuição das vagas</div><div class="section-title">${chartMode==='group'?'Cadeiras por partido/federação':'Cadeiras por partido'}</div><div class="deputy-party-sub">${cargoLabel} · toque numa barra para filtrar a lista</div></div><div class="section-note">${fmt(rows.length)} vagas · ${fmt(distribution.length)} grupo(s)</div></div>
       <div class="deputy-chart-tabs" role="group" aria-label="Agrupar gráfico">
         <button type="button" class="seg ${chartMode==='party'?'active':''}" data-chart-mode="party">Partidos</button>
         <button type="button" class="seg ${chartMode==='group'?'active':''}" data-chart-mode="group">Partido/Federação</button>
@@ -1165,23 +1247,17 @@ function enhanceDeputyElectedView(){
         </button>`).join('')}
       </div>
       ${distribution.length>10?'<button type="button" class="deputy-show-all" id="deputyShowAll">Ver todos</button>':''}
-      <div class="deputy-party-note">Toque em uma barra para filtrar a lista abaixo. A busca por nome continua funcionando junto com o filtro.</div>`;
+      <div class="deputy-party-note">O filtro por nome e o filtro partidário podem ser usados juntos.</div>`;
 
-    summary.querySelectorAll('[data-chart-mode]').forEach(b=>{
-      if(!b.classList.contains('deputy-party-row'))b.addEventListener('click',()=>{
-        S.electedChartMode=b.dataset.chartMode;
-        renderChart();
-        apply();
-      });
-    });
+    summary.querySelectorAll('.deputy-chart-tabs [data-chart-mode]').forEach(b=>b.addEventListener('click',()=>{
+      S.electedChartMode=b.dataset.chartMode;renderChart();apply();
+    }));
     summary.querySelectorAll('[data-party-bar]').forEach(b=>b.addEventListener('click',()=>{
-      const mode=b.dataset.chartMode;
-      const value=b.dataset.partyBar;
+      const mode=b.dataset.chartMode,value=b.dataset.partyBar;
       const next=mode==='group'?`group|${value}`:`party|${value}`;
       S.electedParty=S.electedParty===next?'all':next;
-      partySelect.value=S.electedParty;
-      apply();
-      section.scrollIntoView({behavior:'smooth',block:'start'});
+      partySelect.value=S.electedParty;apply();
+      firstDeputySection?.scrollIntoView({behavior:'smooth',block:'start'});
     }));
     summary.querySelector('#deputyShowAll')?.addEventListener('click',e=>{
       const expanded=summary.classList.toggle('show-all-parties');
@@ -1194,10 +1270,8 @@ function enhanceDeputyElectedView(){
   clearBtn.addEventListener('click',()=>{
     S.electedName='';S.electedParty='all';nameInput.value='';partySelect.value='all';apply();nameInput.focus();
   });
-  renderChart();
-  apply();
+  renderChart();apply();
 }
-
 async function loadElected(force=false){
   const host=$('#electedContent');if(!host)return;
   host.innerHTML=`<div class="page-head"><div><div class="eyebrow">Painel consolidado</div><h1 class="page-title">Eleitos e projeções</h1><div class="page-sub">Oficial TSE separado da projeção proporcional do app.</div></div></div>${electedControls()}<div class="card pad loading"><div class="empty">Atualizando resultados…</div></div>`;
