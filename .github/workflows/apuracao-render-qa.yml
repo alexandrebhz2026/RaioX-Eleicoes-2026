@@ -47,6 +47,14 @@ jobs:
           grep -q "desktop-seat-table{display:none" apuracao-2026/app.css
           grep -q "card-action" apuracao-2026/app.css
           grep -q "favorite-btn" apuracao-2026/app.css
+          grep -q "\"institute\": \"AtlasIntel\"" apuracao-2026/polls-2026.json
+          grep -q "\"institute\": \"Quaest\"" apuracao-2026/polls-2026.json
+          grep -q "\"institute\": \"Datafolha\"" apuracao-2026/polls-2026.json
+          grep -q "Second round + polls v5.7" apuracao-2026/app.css
+          grep -q "fed2:null" apuracao-2026/app.bundle.js
+          grep -q "polls-2026.json" apuracao-2026/app.bundle.js
+          grep -q "loadSecondRoundHome" apuracao-2026/app.bundle.js
+          grep -q "renderSecondRoundPresident" apuracao-2026/app.bundle.js
           grep -q "view-eleitos" apuracao-2026/index.html
           grep -q "FAVORITE_HISTORY_KEY" apuracao-2026/app.bundle.js
           grep -q "createStateShareImage" apuracao-2026/app.bundle.js
