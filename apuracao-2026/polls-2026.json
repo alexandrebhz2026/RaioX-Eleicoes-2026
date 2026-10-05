@@ -1,21 +1,21 @@
 {
   "updatedAt": "2026-10-05T01:20:00-03:00",
-  "note": "Simulações de 2º turno divulgadas antes do 1º turno. Novos levantamentos pós-1º turno devem ser adicionados como novas entradas, sem substituir o histórico.",
+  "note": "Levantamentos de 2º turno exibidos individualmente. Alguns usam votos totais e outros votos válidos; por isso o app não calcula média entre institutos. Os dados abaixo foram publicados antes do 1º turno e permanecem identificados como simulações até saírem pesquisas pós-1º turno.",
   "polls": [
     {
-      "id": "datafolha-2026-10-04-br-2t",
+      "id": "datafolha-br-0410",
       "institute": "Datafolha",
       "scope": "BR",
       "race": "presidente",
-      "phase": "pré-1º turno",
+      "phase": "simulação pré-1º turno",
       "published": "2026-10-04",
-      "fieldStart": "2026-10-03",
+      "fieldStart": "2026-10-02",
       "fieldEnd": "2026-10-03",
       "sample": 4006,
       "margin": 2,
       "confidence": 95,
+      "registration": "BR-01708/2026",
       "basis": "votos totais",
-      "registration": null,
       "candidates": [
         {
           "name": "Lula",
@@ -33,19 +33,49 @@
       "source": "https://datafolha.folha.uol.com.br/eleicoes/2026/10/na-vespera-da-eleicao-lula-tem-45-dos-validos-no-1o-turno-empatado-com-flavio-bolsonaro-42.shtml"
     },
     {
-      "id": "quaest-2026-10-03-br-2t",
+      "id": "atlas-br-0310",
+      "institute": "AtlasIntel",
+      "scope": "BR",
+      "race": "presidente",
+      "phase": "simulação pré-1º turno",
+      "published": "2026-10-03",
+      "fieldStart": "2026-09-27",
+      "fieldEnd": "2026-10-02",
+      "sample": 4945,
+      "margin": 1,
+      "confidence": 95,
+      "registration": "BR-00999/2026",
+      "basis": "votos totais",
+      "candidates": [
+        {
+          "name": "Lula",
+          "party": "PT",
+          "value": 47.6
+        },
+        {
+          "name": "Flávio Bolsonaro",
+          "party": "PL",
+          "value": 47.4
+        }
+      ],
+      "blankNull": 5,
+      "undecided": null,
+      "source": "https://www.poder360.com.br/poder-eleicoes-2026/lula-tem-470-dos-votos-validos-ante-441-de-flavio-diz-atlasintel/"
+    },
+    {
+      "id": "quaest-br-0310",
       "institute": "Quaest",
       "scope": "BR",
       "race": "presidente",
-      "phase": "pré-1º turno",
+      "phase": "simulação pré-1º turno",
       "published": "2026-10-03",
       "fieldStart": "2026-10-02",
       "fieldEnd": "2026-10-03",
       "sample": 3702,
       "margin": 2,
       "confidence": 95,
-      "basis": "votos totais",
       "registration": "BR-02197/2026",
+      "basis": "votos totais",
       "candidates": [
         {
           "name": "Flávio Bolsonaro",
@@ -63,94 +93,154 @@
       "source": "https://www.cnnbrasil.com.br/eleicoes/quaest-2-turno/"
     },
     {
-      "id": "atlas-2026-10-03-br-2t",
-      "institute": "AtlasIntel",
+      "id": "gerp-br-0310",
+      "institute": "Gerp",
       "scope": "BR",
       "race": "presidente",
-      "phase": "pré-1º turno",
+      "phase": "simulação pré-1º turno",
       "published": "2026-10-03",
-      "fieldStart": "2026-09-27",
+      "fieldStart": "2026-09-30",
       "fieldEnd": "2026-10-02",
-      "sample": 4945,
-      "margin": 1,
-      "confidence": 95,
+      "sample": 2400,
+      "margin": 2,
+      "confidence": 95.55,
+      "registration": "BR-00509/2026",
       "basis": "votos válidos",
-      "registration": "BR-00999/2026",
       "candidates": [
-        {
-          "name": "Lula",
-          "party": "PT",
-          "value": 50.1
-        },
         {
           "name": "Flávio Bolsonaro",
           "party": "PL",
-          "value": 49.9
+          "value": 53
+        },
+        {
+          "name": "Lula",
+          "party": "PT",
+          "value": 47
         }
       ],
       "blankNull": null,
       "undecided": null,
-      "source": "https://www.cnnbrasil.com.br/eleicoes/atlas-lula-tem-501-dos-votos-validos-no-2o-turno-flavio-499/"
+      "source": "https://www.cnnbrasil.com.br/eleicoes/gerp-flavio-tem-53-dos-votos-validos-no-2o-turno-lula-47/"
     },
     {
-      "id": "palver-2026-10-03-br-2t",
-      "institute": "Palver",
+      "id": "vox-br-0210",
+      "institute": "Vox Brasil",
       "scope": "BR",
       "race": "presidente",
-      "phase": "pré-1º turno",
-      "published": "2026-10-03",
-      "fieldStart": "2026-09-30",
-      "fieldEnd": "2026-10-03",
-      "sample": 5000,
-      "margin": 2.4,
+      "phase": "simulação pré-1º turno",
+      "published": "2026-10-02",
+      "fieldStart": "2026-09-29",
+      "fieldEnd": "2026-10-01",
+      "sample": 2100,
+      "margin": 2.15,
       "confidence": 95,
+      "registration": "BR-00148/2026",
       "basis": "votos totais",
-      "registration": "BR-00198/2026",
       "candidates": [
         {
           "name": "Flávio Bolsonaro",
           "party": "PL",
-          "value": 49
+          "value": 48.2
         },
         {
           "name": "Lula",
           "party": "PT",
-          "value": 44
+          "value": 45.2
         }
       ],
-      "blankNull": 6,
-      "undecided": 1,
-      "source": "https://noticias.uol.com.br/eleicoes/2026/10/03/pesquisa-palver-lula-e-flavio-tem-empate-tecnico-no-1-turno.ghtm"
+      "blankNull": 2.5,
+      "undecided": 4.1,
+      "source": "https://www.cnnbrasil.com.br/eleicoes/vox-flavio-registra-482-no-2o-turno-lula-452/"
     },
     {
-      "id": "cnt-mda-2026-10-03-br-2t",
-      "institute": "CNT/MDA",
+      "id": "realtime-br-0110",
+      "institute": "Real Time Big Data",
       "scope": "BR",
       "race": "presidente",
-      "phase": "pré-1º turno",
-      "published": "2026-10-03",
-      "fieldStart": "2026-09-30",
-      "fieldEnd": "2026-10-02",
-      "sample": 2007,
-      "margin": 2.2,
+      "phase": "simulação pré-1º turno",
+      "published": "2026-10-01",
+      "fieldStart": "2026-09-26",
+      "fieldEnd": "2026-09-30",
+      "sample": 2000,
+      "margin": 2,
       "confidence": 95,
+      "registration": "BR-09503/2026",
       "basis": "votos totais",
-      "registration": "BR-04756/2026",
+      "candidates": [
+        {
+          "name": "Flávio Bolsonaro",
+          "party": "PL",
+          "value": 46
+        },
+        {
+          "name": "Lula",
+          "party": "PT",
+          "value": 45
+        }
+      ],
+      "blankNull": 5,
+      "undecided": 4,
+      "source": "https://www.cnnbrasil.com.br/eleicoes/real-time-big-data-flavio-tem-46-no-2o-turno-lula-45/"
+    },
+    {
+      "id": "atlas-mg-2309",
+      "institute": "AtlasIntel/Estadão",
+      "scope": "MG",
+      "race": "presidente",
+      "phase": "simulação MG",
+      "published": "2026-09-23",
+      "fieldStart": "2026-09-15",
+      "fieldEnd": "2026-09-20",
+      "sample": 1799,
+      "margin": 2,
+      "confidence": 95,
+      "registration": "BR-06996/2026",
+      "basis": "votos totais",
       "candidates": [
         {
           "name": "Lula",
           "party": "PT",
-          "value": 47.3
+          "value": 49.9
         },
         {
           "name": "Flávio Bolsonaro",
           "party": "PL",
-          "value": 43.1
+          "value": 47.1
         }
       ],
-      "blankNull": 7.6,
-      "undecided": 1.9,
-      "source": "https://noticias.uol.com.br/eleicoes/2026/10/03/pesquisa-cntmda-hoje-veja-resultados-do-ultimo-levantamento.ghtm"
+      "blankNull": 3,
+      "undecided": null,
+      "source": "https://www.cnnbrasil.com.br/eleicoes/atlas-estadao-lula-e-flavio-empatam-tecnicamente-no-2o-turno-em-mg/"
+    },
+    {
+      "id": "realtime-mg-2109",
+      "institute": "Real Time Big Data",
+      "scope": "MG",
+      "race": "presidente",
+      "phase": "simulação MG",
+      "published": "2026-09-21",
+      "fieldStart": "2026-09-16",
+      "fieldEnd": "2026-09-19",
+      "sample": 2000,
+      "margin": 2,
+      "confidence": 95,
+      "registration": "BR-01531/2026",
+      "basis": "votos totais",
+      "candidates": [
+        {
+          "name": "Flávio Bolsonaro",
+          "party": "PL",
+          "value": 46
+        },
+        {
+          "name": "Lula",
+          "party": "PT",
+          "value": 45
+        }
+      ],
+      "blankNull": 5,
+      "undecided": 4,
+      "source": "https://www.cnnbrasil.com.br/eleicoes/real-time-flavio-tem-46-no-2o-turno-em-minas-lula-45/"
     }
   ]
 }
