@@ -329,7 +329,7 @@ async function loadSecondRoundHome(host,force=false){
   wireSecondRoundHome();wireRound2GovernorCards();wireLiveEvents();syncFavoriteButtons();wireFavorites(host);
 }
 
-function loadAgora(force=false){
+async function loadAgora(force=false){
   const host=$('#agoraContent');host.innerHTML='<div class="card pad loading"><div class="empty">Carregando dados oficiais do TSE…</div></div>';
   const [pres,gov]=await Promise.all([
     fetchResult('1','BR',force),
