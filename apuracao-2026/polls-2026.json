@@ -1,0 +1,156 @@
+{
+  "updatedAt": "2026-10-05T01:20:00-03:00",
+  "note": "Simulações de 2º turno divulgadas antes do 1º turno. Novos levantamentos pós-1º turno devem ser adicionados como novas entradas, sem substituir o histórico.",
+  "polls": [
+    {
+      "id": "datafolha-2026-10-04-br-2t",
+      "institute": "Datafolha",
+      "scope": "BR",
+      "race": "presidente",
+      "phase": "pré-1º turno",
+      "published": "2026-10-04",
+      "fieldStart": "2026-10-03",
+      "fieldEnd": "2026-10-03",
+      "sample": 4006,
+      "margin": 2,
+      "confidence": 95,
+      "basis": "votos totais",
+      "registration": null,
+      "candidates": [
+        {
+          "name": "Lula",
+          "party": "PT",
+          "value": 47
+        },
+        {
+          "name": "Flávio Bolsonaro",
+          "party": "PL",
+          "value": 46
+        }
+      ],
+      "blankNull": 6,
+      "undecided": 2,
+      "source": "https://datafolha.folha.uol.com.br/eleicoes/2026/10/na-vespera-da-eleicao-lula-tem-45-dos-validos-no-1o-turno-empatado-com-flavio-bolsonaro-42.shtml"
+    },
+    {
+      "id": "quaest-2026-10-03-br-2t",
+      "institute": "Quaest",
+      "scope": "BR",
+      "race": "presidente",
+      "phase": "pré-1º turno",
+      "published": "2026-10-03",
+      "fieldStart": "2026-10-02",
+      "fieldEnd": "2026-10-03",
+      "sample": 3702,
+      "margin": 2,
+      "confidence": 95,
+      "basis": "votos totais",
+      "registration": "BR-02197/2026",
+      "candidates": [
+        {
+          "name": "Flávio Bolsonaro",
+          "party": "PL",
+          "value": 44
+        },
+        {
+          "name": "Lula",
+          "party": "PT",
+          "value": 42
+        }
+      ],
+      "blankNull": 13,
+      "undecided": 1,
+      "source": "https://www.cnnbrasil.com.br/eleicoes/quaest-2-turno/"
+    },
+    {
+      "id": "atlas-2026-10-03-br-2t",
+      "institute": "AtlasIntel",
+      "scope": "BR",
+      "race": "presidente",
+      "phase": "pré-1º turno",
+      "published": "2026-10-03",
+      "fieldStart": "2026-09-27",
+      "fieldEnd": "2026-10-02",
+      "sample": 4945,
+      "margin": 1,
+      "confidence": 95,
+      "basis": "votos válidos",
+      "registration": "BR-00999/2026",
+      "candidates": [
+        {
+          "name": "Lula",
+          "party": "PT",
+          "value": 50.1
+        },
+        {
+          "name": "Flávio Bolsonaro",
+          "party": "PL",
+          "value": 49.9
+        }
+      ],
+      "blankNull": null,
+      "undecided": null,
+      "source": "https://www.cnnbrasil.com.br/eleicoes/atlas-lula-tem-501-dos-votos-validos-no-2o-turno-flavio-499/"
+    },
+    {
+      "id": "palver-2026-10-03-br-2t",
+      "institute": "Palver",
+      "scope": "BR",
+      "race": "presidente",
+      "phase": "pré-1º turno",
+      "published": "2026-10-03",
+      "fieldStart": "2026-09-30",
+      "fieldEnd": "2026-10-03",
+      "sample": 5000,
+      "margin": 2.4,
+      "confidence": 95,
+      "basis": "votos totais",
+      "registration": "BR-00198/2026",
+      "candidates": [
+        {
+          "name": "Flávio Bolsonaro",
+          "party": "PL",
+          "value": 49
+        },
+        {
+          "name": "Lula",
+          "party": "PT",
+          "value": 44
+        }
+      ],
+      "blankNull": 6,
+      "undecided": 1,
+      "source": "https://noticias.uol.com.br/eleicoes/2026/10/03/pesquisa-palver-lula-e-flavio-tem-empate-tecnico-no-1-turno.ghtm"
+    },
+    {
+      "id": "cnt-mda-2026-10-03-br-2t",
+      "institute": "CNT/MDA",
+      "scope": "BR",
+      "race": "presidente",
+      "phase": "pré-1º turno",
+      "published": "2026-10-03",
+      "fieldStart": "2026-09-30",
+      "fieldEnd": "2026-10-02",
+      "sample": 2007,
+      "margin": 2.2,
+      "confidence": 95,
+      "basis": "votos totais",
+      "registration": "BR-04756/2026",
+      "candidates": [
+        {
+          "name": "Lula",
+          "party": "PT",
+          "value": 47.3
+        },
+        {
+          "name": "Flávio Bolsonaro",
+          "party": "PL",
+          "value": 43.1
+        }
+      ],
+      "blankNull": 7.6,
+      "undecided": 1.9,
+      "source": "https://noticias.uol.com.br/eleicoes/2026/10/03/pesquisa-cntmda-hoje-veja-resultados-do-ultimo-levantamento.ghtm"
+    }
+  ]
+}
