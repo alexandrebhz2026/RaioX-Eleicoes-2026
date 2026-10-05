@@ -7,8 +7,9 @@ const UF_NAME=Object.fromEntries(UFS);
 const CARGO={'1':'Presidente','3':'Governador','5':'Senador','6':'Deputado Federal','7':'Deputado Estadual','8':'Deputado Distrital'};
 const COLORS=['#7c3aed','#2563eb','#0891b2','#0f9f6e','#d97706','#db2777','#4f46e5','#65a30d','#ea580c','#9333ea','#0284c7','#059669','#ca8a04','#be123c','#6366f1','#15803d','#c2410c','#a21caf'];
 const S={
-  codes:{fed:'6257',est:'6259'},view:'agora',uf:'MG',cargo:'3',cache:new Map(),governors:null,
-  congress:{camara:null,senado:null},poll:null,loading:new Set(),lastRefresh:null,candidateIndex:new Map(),electedMode:'official',electedUf:'MG',electedCargo:'all'
+  codes:{fed:'6257',est:'6259',fed2:null,est2:null},view:'agora',uf:'MG',cargo:'3',cache:new Map(),governors:null,
+  congress:{camara:null,senado:null},poll:null,loading:new Set(),lastRefresh:null,candidateIndex:new Map(),electedMode:'official',electedUf:'MG',electedCargo:'all',
+  presidentMode:'auto',pollData:null,pollScope:'BR',round2Ready:false
 };
 const API_BASE=location.hostname.endsWith('.vercel.app')?'':'https://apuracao-2026-lake.vercel.app';
 const apiUrl=path=>API_BASE+path;
@@ -22,31 +23,46 @@ const clamp=n=>Math.max(0,Math.min(100,Number(n||0)));
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function hashColor(s=''){let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;return COLORS[h%COLORS.length]}
 function tsePath(path){return apiUrl('/api/tse?path='+encodeURIComponent(path))}
-function resultPath(cargo,uf){
-  const ele=cargo==='1'?S.codes.fed:S.codes.est;
-  const abr=cargo==='1'?'br':uf.toLowerCase();
+function electionCode(cargo,round=1){
+  const isFed=String(cargo)==='1';
+  if(Number(round)===2)return isFed?S.codes.fed2:S.codes.est2;
+  return isFed?S.codes.fed:S.codes.est;
+}
+function resultPath(cargo,uf,round=1){
+  const ele=electionCode(cargo,round);
+  if(!ele)throw new Error(round===2?'2º turno ainda não publicado no TSE':'Código da eleição indisponível');
+  const abr=String(cargo)==='1'?'br':String(uf).toLowerCase();
   return `/oficial/ele2026/${ele}/dados/${abr}/${abr}-c${String(cargo).padStart(4,'0')}-e${String(ele).padStart(6,'0')}-u.json`;
 }
 async function discoverCodes(){
   try{
-    const r=await fetch(tsePath('/oficial/comum/config/ele-c.json'),{cache:'no-store'}); if(!r.ok)return;
+    const r=await fetch(tsePath('/oficial/comum/config/ele-c.json'),{cache:'no-store'});if(!r.ok)return;
     const j=await r.json();
     for(const pl of j.pl||[]) if(pl.c==='ele2026') for(const e of pl.e||[]){
-      const cs=new Set((e.abr||[]).flatMap(a=>(a.cp||[]).map(c=>String(c.cd))));
-      if(cs.has('1'))S.codes.fed=String(e.cd);
-      if(cs.has('3')||cs.has('5')||cs.has('6'))S.codes.est=String(e.cd);
+      const cs=new Set((e.abr||[]).flatMap(x=>(x.cp||[]).map(c=>String(c.cd))));
+      const name=String(e.nm||'');
+      const round=String(e.t||'')==='2'||/2º\s*turno|2o\s*turno|segundo turno/i.test(name)?2:1;
+      if(cs.has('1')){
+        if(round===2)S.codes.fed2=String(e.cd);else S.codes.fed=String(e.cd);
+      }
+      if(cs.has('3')){
+        if(round===2)S.codes.est2=String(e.cd);else S.codes.est=String(e.cd);
+      }
     }
+    S.round2Ready=!!(S.codes.fed2||S.codes.est2);
   }catch{}
 }
-async function fetchResult(cargo,uf='BR',force=false){
-  const key=cargo+':'+uf; const hit=S.cache.get(key);
+async function fetchResult(cargo,uf='BR',force=false,round=1){
+  const key=`r${round}:${cargo}:${uf}`;const hit=S.cache.get(key);
   if(!force&&hit&&Date.now()-hit.at<18000)return hit.data;
-  const ele=cargo==='1'?S.codes.fed:S.codes.est;
-  const r=await fetch(tsePath(resultPath(cargo,uf)),{cache:'no-store'});
+  const ele=electionCode(cargo,round);
+  if(!ele){if(hit)return hit.data;throw new Error(round===2?'2º turno ainda não publicado no TSE':'Código da eleição indisponível')}
+  const r=await fetch(tsePath(resultPath(cargo,uf,round)),{cache:'no-store'});
   if(!r.ok){if(hit)return hit.data;throw new Error('TSE '+r.status)}
   const raw=await r.json();
   const data=adaptUnified(raw,{electionCode:ele,uf,cargoCode:cargo,photoBase:apiUrl('/api/tse?path=')});
-  S.cache.set(key,{at:Date.now(),data,raw}); S.lastRefresh=Date.now(); updateLive();
+  data.meta={...(data.meta||{}),round:Number(round)};
+  S.cache.set(key,{at:Date.now(),data,raw});S.lastRefresh=Date.now();updateLive();
   return data;
 }
 async function batchMap(items,limit,fn){
@@ -102,7 +118,7 @@ async function congressClient(force=false){
   };
 }
 
-function cachedRaw(cargo,uf='BR'){return S.cache.get(cargo+':'+uf)?.raw}
+function cachedRaw(cargo,uf='BR',round=1){return S.cache.get(`r${round}:${cargo}:${uf}`)?.raw}
 function sectionsSummary(r){
   const done=Number(r?.secoesTotalizadas||0),total=Number(r?.secoesTotal||0),remaining=Number(r?.secoesNaoTotalizadas||Math.max(0,total-done));
   return{done,total,remaining,pct:Number(r?.pctTotalizado||0),label:`${fmt(done)} de ${fmt(total)} seções/urnas totalizadas`};
