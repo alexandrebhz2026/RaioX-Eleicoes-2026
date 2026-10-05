@@ -31,7 +31,11 @@ jobs:
           base="https://apuracao-2026.onrender.com"
           browser="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser)"
           test -n "$browser"
-          "$browser" --headless --no-sandbox --disable-gpu --window-size=390,844 --virtual-time-budget=18000 --dump-dom "$base/?qa=$GITHUB_SHA" > /tmp/home.html
+          for i in 1 2 3; do
+            "$browser" --headless --no-sandbox --disable-gpu --window-size=390,844 --virtual-time-budget=30000 --dump-dom "$base/?qa=$GITHUB_SHA&try=$i" > /tmp/home.html || true
+            if grep -q "Apuração em tempo real" /tmp/home.html && grep -q "2º turno" /tmp/home.html; then break; fi
+            sleep 5
+          done
           grep -q "Apuração em tempo real" /tmp/home.html
           grep -q "2º turno" /tmp/home.html
       - name: Validate second-round screen
@@ -39,7 +43,7 @@ jobs:
           set -e
           base="https://apuracao-2026.onrender.com"
           browser="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser)"
-          "$browser" --headless --no-sandbox --disable-gpu --window-size=390,844 --virtual-time-budget=18000 --dump-dom "$base/?view=presidente&mode=round2&qa=$GITHUB_SHA" > /tmp/round2.html
+          "$browser" --headless --no-sandbox --disable-gpu --window-size=390,844 --virtual-time-budget=30000 --dump-dom "$base/?view=presidente&mode=round2&qa=$GITHUB_SHA" > /tmp/round2.html
           grep -q "Brasil · 2º turno" /tmp/round2.html
           grep -q "Classificados pelo TSE" /tmp/round2.html
           grep -q "Pesquisas" /tmp/round2.html
@@ -48,7 +52,7 @@ jobs:
           set -e
           base="https://apuracao-2026.onrender.com"
           browser="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser)"
-          "$browser" --headless --no-sandbox --disable-gpu --window-size=390,844 --virtual-time-budget=18000 --dump-dom "$base/?view=presidente&mode=polls&qa=$GITHUB_SHA" > /tmp/polls.html
+          "$browser" --headless --no-sandbox --disable-gpu --window-size=390,844 --virtual-time-budget=30000 --dump-dom "$base/?view=presidente&mode=polls&qa=$GITHUB_SHA" > /tmp/polls.html
           grep -q "Pesquisas eleitorais" /tmp/polls.html
           grep -q "Datafolha" /tmp/polls.html
           grep -q "Quaest" /tmp/polls.html
