@@ -1,6 +1,6 @@
 {
-  "updatedAt": "2026-10-05T06:56:00-03:00",
-  "note": "As pesquisas abaixo são simulações de 2º turno divulgadas antes do 1º turno de 04/10/2026. Elas permanecem no histórico até surgirem levantamentos pós-1º turno. Cada instituto é exibido separadamente; o app não calcula média própria.",
+  "updatedAt": "2026-10-05T06:58:00-03:00",
+  "note": "Pesquisas de 2º turno são exibidas individualmente, com instituto, campo, amostra, margem de erro, registro no TSE e fonte. O app não calcula média própria. Até surgir levantamento pós-1º turno, os cards abaixo permanecem identificados como simulações realizadas antes do 1º turno.",
   "polls": [
     {
       "id": "datafolha-br-0310",
@@ -9,7 +9,7 @@
       "race": "presidente",
       "phase": "simulação pré-1º turno",
       "published": "2026-10-03",
-      "fieldStart": "2026-10-03",
+      "fieldStart": "2026-10-02",
       "fieldEnd": "2026-10-03",
       "sample": 4006,
       "margin": 2,
@@ -28,9 +28,9 @@
           "value": 46
         }
       ],
-      "blankNull": 6,
-      "undecided": 2,
-      "source": "https://noticias.uol.com.br/ultimas-noticias/agencia-estado/2026/10/03/datafolha-lula-tem-45-dos-votos-validos-e-flavio-bolsonaro-42-no-1-turno.amp.htm"
+      "blankNull": null,
+      "undecided": null,
+      "source": "https://www1.folha.uol.com.br/poder/2026/10/datafolha-lula-lidera-entre-mais-jovens-e-mais-velhos-no-1o-turno-e-flavio-bolsonaro-entre-os-mais-ricos.shtml"
     },
     {
       "id": "quaest-br-0310",
@@ -58,9 +58,9 @@
           "value": 42
         }
       ],
-      "blankNull": null,
-      "undecided": null,
-      "source": "https://noticias.uol.com.br/eleicoes/2026/10/03/quaest-presidencial-votos-validos-1-turno.ghtm"
+      "blankNull": 13,
+      "undecided": 1,
+      "source": "https://www.cnnbrasil.com.br/eleicoes/quaest-2-turno/"
     },
     {
       "id": "atlas-br-2909",
@@ -88,99 +88,69 @@
           "value": 47.6
         }
       ],
-      "blankNull": 4.7,
+      "blankNull": null,
       "undecided": null,
-      "source": "https://noticias.uol.com.br/eleicoes/2026/09/29/pesquisa-presidente-2026-veja-numeros-do-levantamento-atlasintelbloomberg.ghtm"
+      "source": "https://www.cnnbrasil.com.br/eleicoes/atlas-flavio-tem-477-das-intencoes-de-voto-no-2o-turno-lula-476/"
     },
     {
-      "id": "btg-nexus-br-2809",
-      "institute": "BTG/Nexus",
+      "id": "vox-br-0210",
+      "institute": "Vox Brasil",
       "scope": "BR",
       "race": "presidente",
       "phase": "simulação pré-1º turno",
-      "published": "2026-09-28",
-      "fieldStart": "2026-09-25",
-      "fieldEnd": "2026-09-27",
-      "sample": 2000,
-      "margin": 2,
+      "published": "2026-10-02",
+      "fieldStart": "2026-09-29",
+      "fieldEnd": "2026-10-01",
+      "sample": 2100,
+      "margin": 2.15,
       "confidence": 95,
-      "registration": "BR-07557/2026",
+      "registration": "BR-00148/2026",
       "basis": "votos totais",
       "candidates": [
         {
-          "name": "Lula",
-          "party": "PT",
-          "value": 46
-        },
-        {
           "name": "Flávio Bolsonaro",
           "party": "PL",
-          "value": 44
+          "value": 48.2
+        },
+        {
+          "name": "Lula",
+          "party": "PT",
+          "value": 45.2
         }
       ],
-      "blankNull": 8,
-      "undecided": 1,
-      "source": "https://noticias.uol.com.br/ultimas-noticias/agencia-estado/2026/09/28/lula-tem-46-ante-44-de-flavio-no-2o-turno-aponta-pesquisa-btgnexus.htm"
+      "blankNull": 2.5,
+      "undecided": 4.1,
+      "source": "https://www.cnnbrasil.com.br/eleicoes/vox-flavio-registra-482-no-2o-turno-lula-452/"
     },
     {
-      "id": "realtime-mg-2809",
+      "id": "realtime-br-0110",
       "institute": "Real Time Big Data",
-      "scope": "MG",
+      "scope": "BR",
       "race": "presidente",
-      "phase": "simulação MG",
-      "published": "2026-09-28",
-      "fieldStart": "2026-09-23",
-      "fieldEnd": "2026-09-26",
+      "phase": "simulação pré-1º turno",
+      "published": "2026-10-01",
+      "fieldStart": "2026-09-26",
+      "fieldEnd": "2026-09-30",
       "sample": 2000,
       "margin": 2,
       "confidence": 95,
-      "registration": "BR-06289/2026",
+      "registration": "BR-09503/2026",
       "basis": "votos totais",
       "candidates": [
-        {
-          "name": "Lula",
-          "party": "PT",
-          "value": 46
-        },
         {
           "name": "Flávio Bolsonaro",
           "party": "PL",
           "value": 46
+        },
+        {
+          "name": "Lula",
+          "party": "PT",
+          "value": 45
         }
       ],
-      "blankNull": 4,
+      "blankNull": 5,
       "undecided": 4,
-      "source": "https://www.cnnbrasil.com.br/eleicoes/real-time-big-data-em-mg-lula-e-flavio-empatam-com-46-no-2o-turno/"
-    },
-    {
-      "id": "verita-mg-1809",
-      "institute": "Veritá",
-      "scope": "MG",
-      "race": "presidente",
-      "phase": "simulação MG",
-      "published": "2026-09-18",
-      "fieldStart": "2026-09-12",
-      "fieldEnd": "2026-09-17",
-      "sample": 2030,
-      "margin": 2.5,
-      "confidence": 95,
-      "registration": "BR-03240/2026",
-      "basis": "votos totais",
-      "candidates": [
-        {
-          "name": "Flávio Bolsonaro",
-          "party": "PL",
-          "value": 45.6
-        },
-        {
-          "name": "Lula",
-          "party": "PT",
-          "value": 38.4
-        }
-      ],
-      "blankNull": 11.6,
-      "undecided": 4.4,
-      "source": "https://www.cnnbrasil.com.br/eleicoes/verita-flavio-tem-456-no-2o-turno-em-mg-lula-384/"
+      "source": "https://www.cnnbrasil.com.br/eleicoes/real-time-big-data-flavio-tem-46-no-2o-turno-lula-45/"
     }
   ]
 }
