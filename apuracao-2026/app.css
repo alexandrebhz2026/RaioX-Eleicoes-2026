@@ -444,3 +444,28 @@ body,.appbar,.appbar-in,.shell,.view,.section,.page-head,.card,.congress-top,.co
 @media(max-width:390px){
   .mobile-seat-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+/* Official TSE card colors v5.5 */
+.candidate-row.candidate-official-elected{
+  background:color-mix(in srgb,var(--success) 22%,var(--surface))!important;
+  border-color:color-mix(in srgb,var(--success) 68%,var(--border))!important;
+  box-shadow:inset 5px 0 0 var(--success),0 5px 18px color-mix(in srgb,var(--success) 10%,transparent)!important;
+}
+.candidate-row.candidate-official-elected .cand-name{color:color-mix(in srgb,var(--success) 82%,var(--text))!important}
+.candidate-row.candidate-official-elected .vote-bar>span{background:var(--success)!important}
+.candidate-row.candidate-official-runoff{
+  background:color-mix(in srgb,var(--warning) 16%,var(--surface))!important;
+  border-color:color-mix(in srgb,var(--warning) 52%,var(--border))!important;
+  box-shadow:inset 5px 0 0 var(--warning)!important;
+}
+.candidate-row.candidate-official-runoff .vote-bar>span{background:var(--warning)!important}
+.leader-card.leader-official-elected{
+  background:color-mix(in srgb,var(--success) 18%,var(--surface))!important;
+  border-color:color-mix(in srgb,var(--success) 58%,var(--border))!important;
+  box-shadow:inset 4px 0 0 var(--success)!important;
+}
+.leader-card.leader-official-runoff{
+  background:color-mix(in srgb,var(--warning) 14%,var(--surface))!important;
+  border-color:color-mix(in srgb,var(--warning) 48%,var(--border))!important;
+  box-shadow:inset 4px 0 0 var(--warning)!important;
+}
