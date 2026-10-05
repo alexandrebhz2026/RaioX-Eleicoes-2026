@@ -639,3 +639,28 @@ body,.appbar,.appbar-in,.shell,.view,.section,.page-head,.card,.congress-top,.co
   .elected-federation-chip{max-width:150px}
   .party-color-dot{width:8px;height:8px;flex-basis:8px}
 }
+
+
+/* Filtros de deputados visíveis no consolidado e por estado v5.18 */
+.deputy-filter-title{display:flex;align-items:baseline;gap:7px;grid-column:1/-1}
+.deputy-filter-title strong{font-size:11px;color:var(--text)}
+.deputy-filter-title span{font-size:9px;color:var(--muted)}
+.state-deputy-filters{padding:13px 14px;margin:12px 0}
+.state-deputy-filter-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:10px}
+.state-deputy-filter-head strong{display:block;font-size:14px;margin-top:2px}
+.state-deputy-filter-head>span{font-size:9px;color:var(--muted);white-space:nowrap}
+.state-deputy-filter-grid{display:grid;grid-template-columns:minmax(220px,1fr) minmax(190px,280px) auto;gap:8px;align-items:center}
+.state-deputy-filter-grid .select{height:44px}
+.state-deputy-filter-status{margin-top:8px;font-size:9px;color:var(--muted)}
+.deputy-global-empty{margin-bottom:13px}
+.candidate-row[hidden],.elected-section[hidden]{display:none!important}
+@media(max-width:820px){
+  .state-deputy-filter-grid{grid-template-columns:minmax(0,1fr) minmax(160px,.75fr) auto}
+}
+@media(max-width:520px){
+  .deputy-filter-title{grid-column:1/-1}
+  .state-deputy-filter-head{align-items:flex-start}
+  .state-deputy-filter-grid{grid-template-columns:1fr 1fr}
+  .state-deputy-filter-grid .deputy-search-wrap{grid-column:1/-1}
+  .state-deputy-filter-grid .deputy-clear-btn{width:100%}
+}
