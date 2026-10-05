@@ -614,3 +614,10 @@ body,.appbar,.appbar-in,.shell,.view,.section,.page-head,.card,.congress-top,.co
   .deputy-party-head .section-note{margin-top:7px}
   .deputy-party-row{grid-template-columns:20px 54px minmax(0,1fr) 30px;gap:6px;padding:7px 5px}
 }
+
+.deputy-chart-tabs{display:flex;gap:6px;margin-top:12px}
+.deputy-chart-tabs .seg{padding:8px 12px;font-size:10px}
+@media(max-width:520px){
+  .deputy-chart-tabs{display:grid;grid-template-columns:1fr 1fr}
+  .deputy-chart-tabs .seg{width:100%}
+}
