@@ -1,4 +1,4 @@
-/* Apuracao 2026 browser bundle v5.10 */
+/* Apuracao 2026 browser bundle v5.11 */
 function tseInt(v){return Number(String(v??'0').replace(/\./g,'').replace(',','.'))||0}
 function tsePct(v){return Number(String(v??'0').replace(',','.'))||0}
 function roundQE(vv,seats){if(seats<=0)return 0;const raw=vv/seats,f=Math.floor(raw);return raw-f>0.5?f+1:f}
@@ -360,7 +360,11 @@ async function loadSecondRoundHome(host,force=false){
 }
 
 async function loadAgora(force=false){
-  const host=$('#agoraContent');host.innerHTML='<div class="card pad loading"><div class="empty">Carregando dados oficiais do TSE…</div></div>';
+  const host=$('#agoraContent');
+  host.innerHTML=`<div class="page-head"><div><div class="eyebrow">Eleições Gerais 2026</div><h1 class="page-title">Apuração em tempo real</h1><div class="page-sub">Dados oficiais do TSE.</div></div><div class="source-pill"><span class="live-dot"></span> Fonte oficial · TSE</div></div>
+    <section class="card round2-home-callout"><div class="round2-home-copy"><span class="eyebrow">2º turno · 25/10</span><h2>2º turno 2026</h2><p>Preparando confronto presidencial, governadores e pesquisas.</p></div><div class="round2-home-actions"><button class="primary-btn" data-president-mode="round2" data-open-president>Ver 2º turno</button><button class="ghost-btn" data-president-mode="polls" data-open-president>Pesquisas</button></div></section>
+    <div class="card pad loading"><div class="empty">Atualizando resultado oficial do 1º turno…</div></div>`;
+  wireSecondRoundHome();
   const pres=await fetchResult('1','BR',force);
   const gov=S.governors||{states:[]};
   recordPresident(pres);
@@ -775,11 +779,26 @@ async function renderSecondRoundPresident(host,r1,force=false){
   }
 }
 async function loadPresident(force=false){
-  const host=$('#presidentContent');host.innerHTML='<div class="card pad loading"><div class="empty">Carregando Presidente…</div></div>';
-  const r=await fetchResult('1','BR',force,1);recordPresident(r);
+  const host=$('#presidentContent');
   let active=S.presidentMode;
+
+  if(active==='polls'){
+    host.innerHTML='<div class="page-head"><div><div class="eyebrow">2º turno 2026</div><h1 class="page-title">Pesquisas eleitorais</h1><div class="page-sub">Carregando levantamentos verificados…</div></div></div>';
+    await renderPollsPresident(host,null,force);
+    return;
+  }
+
+  if(active==='round2'){
+    host.innerHTML=`<div class="page-head"><div><div class="eyebrow">Brasil · 2º turno</div><h1 class="page-title">Presidente da República</h1><div class="page-sub">Confronto definido pelo TSE · votação em 25/10/2026.</div></div></div>
+      ${presidentModeTabs('round2')}
+      <section class="card round2-hero"><div class="section-head"><div><div class="eyebrow">Confronto presidencial</div><div class="section-title">Classificados pelo TSE</div></div></div><div class="empty">Carregando os dados do 1º turno…</div></section>`;
+    wirePresidentModeTabs();
+  }else{
+    host.innerHTML='<div class="card pad loading"><div class="empty">Carregando Presidente…</div></div>';
+  }
+
+  const r=await fetchResult('1','BR',force,1);recordPresident(r);
   if(active==='auto')active=r.meta?.md==='s'?'round2':'round1';
-  if(active==='polls'){await renderPollsPresident(host,r,force);return}
   if(active==='round2'){await renderSecondRoundPresident(host,r,force);return}
   const official=officialSelected(r,'1');
   host.innerHTML=`
