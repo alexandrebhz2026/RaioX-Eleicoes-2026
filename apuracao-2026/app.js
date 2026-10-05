@@ -543,12 +543,145 @@ function presidentApurationPanel(r){
     </div>
   </div>`;
 }
+
+const ROUND2_ELECTION_DAY=new Date('2026-10-25T17:00:00-03:00');
+function presidentModeTabs(active){
+  return `<div class="president-mode-tabs">
+    <button class="seg ${active==='round1'?'active':''}" data-president-mode="round1">1º turno</button>
+    <button class="seg ${active==='round2'?'active':''}" data-president-mode="round2">2º turno</button>
+    <button class="seg ${active==='polls'?'active':''}" data-president-mode="polls">Pesquisas</button>
+  </div>`;
+}
+function wirePresidentModeTabs(){
+  $('[data-president-mode]').forEach(b=>b.onclick=()=>{
+    S.presidentMode=b.dataset.presidentMode;
+    showView('presidente');
+  });
+}
+function secondRoundCountdown(){
+  const diff=ROUND2_ELECTION_DAY.getTime()-Date.now();
+  if(diff<=0)return{past:true,label:'Dia do 2º turno'};
+  const days=Math.floor(diff/86400000),hours=Math.floor((diff%86400000)/3600000);
+  return{past:false,label:`${days} dia(s) e ${hours}h para o 2º turno`,days,hours};
+}
+function firstRoundRunoffCandidates(r){
+  if(!r?.candidatos?.length)return[];
+  return r.candidatos.slice(0,2);
+}
+async function loadPollData(force=false){
+  if(S.pollData&&!force)return S.pollData;
+  const r=await fetch(`./polls-2026.json?v=${force?Date.now():'1'}`,{cache:force?'no-store':'default'});
+  if(!r.ok)throw new Error('Não foi possível carregar pesquisas');
+  S.pollData=await r.json();
+  return S.pollData;
+}
+function pollValue(v){
+  return Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:Number(v)%1?1:0,maximumFractionDigits:1})+'%';
+}
+function pollCard(p){
+  const cs=(p.candidates||[]).slice(0,2);
+  return `<article class="poll-card">
+    <div class="poll-card-head"><div><span class="eyebrow">${esc(p.institute)}</span><strong>${new Date(p.published+'T12:00:00').toLocaleDateString('pt-BR')}</strong></div><span class="poll-phase">${esc(p.phase||'')}</span></div>
+    <div class="poll-bars">${cs.map((c,i)=>`<div class="poll-row"><div class="poll-row-head"><span>${esc(c.name)} <small>${esc(c.party)}</small></span><strong>${pollValue(c.value)}</strong></div><div class="poll-track"><span class="${i===0?'a':'b'}" style="width:${clamp(c.value)}%"></span></div></div>`).join('')}</div>
+    <div class="poll-other">${p.blankNull!==null&&p.blankNull!==undefined?`<span>Branco/nulo <b>${pollValue(p.blankNull)}</b></span>`:''}${p.undecided!==null&&p.undecided!==undefined?`<span>Indecisos <b>${pollValue(p.undecided)}</b></span>`:''}</div>
+    <div class="poll-meta">
+      <span>Campo: ${new Date(p.fieldStart+'T12:00:00').toLocaleDateString('pt-BR')}–${new Date(p.fieldEnd+'T12:00:00').toLocaleDateString('pt-BR')}</span>
+      <span>${fmt(p.sample)} entrevistas</span><span>Margem ±${String(p.margin).replace('.',',')} p.p.</span>
+      <span>${esc(p.basis)}</span>${p.registration?`<span>TSE ${esc(p.registration)}</span>`:''}
+    </div>
+    <a class="poll-source-link" href="${esc(p.source)}" target="_blank" rel="noopener noreferrer">Abrir fonte ↗</a>
+  </article>`;
+}
+function pollsPanel(data,{limit=0}={}){
+  const polls=(data?.polls||[]).filter(p=>p.scope===S.pollScope&&p.race==='presidente').sort((a,b)=>String(b.published).localeCompare(String(a.published)));
+  const shown=limit?polls.slice(0,limit):polls;
+  return `<div class="polls-head-note">Pesquisas são retratos do momento, não previsão de resultado. O app <strong>não calcula média própria</strong> entre institutos.</div>
+    <div class="poll-grid">${shown.map(pollCard).join('')||'<div class="empty">Nenhuma pesquisa cadastrada neste recorte.</div>'}</div>`;
+}
+async function renderPollsPresident(host,r1,force=false){
+  const data=await loadPollData(force);
+  host.innerHTML=`<div class="page-head"><div><div class="eyebrow">2º turno 2026</div><h1 class="page-title">Pesquisas eleitorais</h1><div class="page-sub">Levantamentos de diferentes institutos, exibidos individualmente e com ficha técnica.</div></div><div class="source-pill">${(data.polls||[]).length} pesquisas cadastradas</div></div>
+    ${presidentModeTabs('polls')}
+    <div class="card poll-context-card"><strong>Contexto</strong><span>${esc(data.note||'')}</span></div>
+    ${pollsPanel(data)}`;
+  wirePresidentModeTabs();
+}
+function secondRoundFaceoffCard(c,r1,r2,index){
+  const old=r1?.candidatos?.find(x=>String(x.numero)===String(c.numero));
+  const state=r2?candidateCardState(c,r2,'1',index):{elected:false,runoff:true,oi:null};
+  const cls=state.elected?' official-card-green':state.runoff?' official-card-orange':'';
+  return `<article class="round2-candidate${cls}">
+    ${avatar(c,'large')}
+    <div class="round2-candidate-main"><span class="result-context">${esc(c.numero)} · ${esc(c.partido)}</span><h3>${esc(c.nome)}</h3>
+      <div class="round2-votes">${r2?`<strong>${fmt(c.votos)}</strong> votos · <b>${pct(c.pct)}</b>`:`<strong>${fmt(old?.votos||c.votos)}</strong> votos no 1º turno · <b>${pct(old?.pct||c.pct)}</b>`}</div>
+      ${old&&r2?`<small>1º turno: ${fmt(old.votos)} votos · ${pct(old.pct)}</small>`:''}
+      ${state.oi?`<span class="${state.oi.cls}">${esc(state.oi.label)}</span>`:'<span class="leader-badge">CLASSIFICADO AO 2º TURNO · TSE</span>'}
+    </div>
+    <div class="round2-star">${favoriteButton(candidateForFavorite(c,r2||r1,'1'))}</div>
+  </article>`;
+}
+function round2Difference(r){
+  if(!r?.candidatos?.length||r.candidatos.length<2)return null;
+  const a=r.candidatos[0],b=r.candidatos[1];
+  return{votes:Math.abs(Number(a.votos||0)-Number(b.votos||0)),leader:a,pctGap:Math.abs(Number(a.pct||0)-Number(b.pct||0))};
+}
+function round2GovernorStates(gov){
+  return (gov?.states||[]).filter(x=>String(x.md||'').toLowerCase()==='s'||governorVisualState(x).runoff);
+}
+function round2GovernorCards(gov){
+  const rows=round2GovernorStates(gov);
+  if(!rows.length)return '<div class="empty">Nenhum estado identificado para 2º turno neste momento.</div>';
+  return `<div class="round2-state-grid">${rows.map(x=>`<button class="round2-state-card" data-round2-uf="${esc(x.uf)}"><strong>${esc(x.uf)}</strong><span>2º turno TSE</span><small>${fmt(x.secoesTotalizadas||0)} / ${fmt(x.secoesTotal||0)} seções no 1º turno</small><b>Abrir confronto →</b></button>`).join('')}</div>`;
+}
+async function openRound2Governor(uf){
+  const modal=ensureStateQuickModal(),body=$('#stateQuickBody');modal.classList.remove('hidden');
+  body.innerHTML=`<div class="quick-head"><div><span class="eyebrow">2º turno · Governador</span><h2>${esc(UF_NAME[uf]||uf)} · ${esc(uf)}</h2><p>Carregando confronto…</p></div></div>`;
+  let r2=null,r1=null;
+  try{r1=await fetchResult('3',uf,false,1)}catch{}
+  if(S.codes.est2){try{r2=await fetchResult('3',uf,true,2)}catch{}}
+  const base=r2||r1,cands=r2?.candidatos?.slice(0,2)||r1?.candidatos?.slice(0,2)||[];
+  const diff=r2?round2Difference(r2):null;
+  body.innerHTML=`<div class="quick-head"><div><span class="eyebrow">2º turno · Governador</span><h2>${esc(UF_NAME[uf]||uf)} · ${esc(uf)}</h2><p>${r2?`${fmt(r2.secoesTotalizadas)} de ${fmt(r2.secoesTotal)} seções · ${pct(r2.pctTotalizado)}`:'TSE ainda não publicou a apuração do 2º turno'}</p></div></div>
+    <div class="round2-modal-candidates">${cands.map((c,i)=>candidateRow(c,base,'3',i)).join('')}</div>
+    ${diff?`<div class="round2-difference"><span>Diferença agora</span><strong>${fmt(diff.votes)} votos</strong><small>${pct(diff.pctGap)} p.p. entre os dois</small></div>`:''}`;
+  syncFavoriteButtons();wireFavorites(body);
+}
+function wireRound2GovernorCards(){
+  $('[data-round2-uf]').forEach(b=>b.onclick=()=>openRound2Governor(b.dataset.round2Uf));
+}
+async function renderSecondRoundPresident(host,r1,force=false){
+  const gov=S.governors&&!force?S.governors:await governorSummaryClient(force);
+  S.governors=gov;
+  let r2=null;
+  if(S.codes.fed2){try{r2=await fetchResult('1','BR',force,2)}catch{}}
+  const candidates=r2?.candidatos?.slice(0,2)||firstRoundRunoffCandidates(r1);
+  const countdown=secondRoundCountdown(),diff=r2?round2Difference(r2):null;
+  const pollData=await loadPollData(false).catch(()=>null);
+  host.innerHTML=`<div class="page-head"><div><div class="eyebrow">Brasil · 2º turno</div><h1 class="page-title">Presidente da República</h1><div class="page-sub">${r2?'Apuração oficial do 2º turno em tempo real.':'Confronto definido pelo TSE · votação em 25/10/2026.'}</div></div><div class="round2-countdown"><span>${r2?'Apuração do 2º turno':countdown.label}</span><strong>${r2?pct(r2.pctTotalizado):'25 OUT'}</strong></div></div>
+    ${presidentModeTabs('round2')}
+    <section class="card round2-hero">
+      <div class="section-head"><div><div class="eyebrow">${r2?'TSE · 2º turno':'Confronto presidencial'}</div><div class="section-title">${r2?'Apuração ao vivo':'Classificados pelo TSE'}</div></div><div class="section-note">${S.codes.fed2?'código TSE do 2º turno detectado':'aguardando código TSE do 2º turno'}</div></div>
+      ${r2?sectionsBadge(r2):'<div class="round2-prep-note">O app continuará consultando a configuração oficial do TSE. Assim que o pleito de 2º turno aparecer, passa a usar o novo arquivo sem perder o histórico do 1º turno.</div>'}
+      <div class="round2-faceoff">${candidates.map((c,i)=>secondRoundFaceoffCard(c,r1,r2,i)).join('')}</div>
+      ${diff?`<div class="round2-difference"><span>Diferença agora</span><strong>${fmt(diff.votes)} votos</strong><small>${pct(diff.pctGap)} p.p. · liderança não significa resultado oficial</small></div>`:''}
+      ${r2?electionAlert(r2,'1'):''}
+    </section>
+    <section class="section"><div class="section-head"><div><div class="eyebrow">Governadores</div><div class="section-title">Estados com 2º turno</div></div><div class="section-note">${round2GovernorStates(gov).length} UF(s)</div></div>${round2GovernorCards(gov)}</section>
+    <section class="section"><div class="section-head"><div><div class="eyebrow">Pesquisas</div><div class="section-title">Levantamentos recentes</div></div><button class="card-action" data-president-mode="polls">Ver todas <span>→</span></button></div>${pollData?pollsPanel(pollData,{limit:3}):'<div class="card empty">Pesquisas indisponíveis agora.</div>'}</section>`;
+  wirePresidentModeTabs();wireRound2GovernorCards();syncFavoriteButtons();wireFavorites(host);
+}
+
 async function loadPresident(force=false){
   const host=$('#presidentContent');host.innerHTML='<div class="card pad loading"><div class="empty">Carregando Presidente…</div></div>';
-  const r=await fetchResult('1','BR',force);recordPresident(r);
+  const r=await fetchResult('1','BR',force,1);recordPresident(r);
+  let active=S.presidentMode;
+  if(active==='auto')active=r.meta?.md==='s'?'round2':'round1';
+  if(active==='polls'){await renderPollsPresident(host,r,force);return}
+  if(active==='round2'){await renderSecondRoundPresident(host,r,force);return}
   const official=officialSelected(r,'1');
   host.innerHTML=`
-  <div class="page-head president-head"><div><div class="eyebrow">Brasil · 1º turno</div><h1 class="page-title">Presidente da República</h1><div class="page-sub">Ranking, situação oficial, votos e evolução da totalização.</div></div>${presidentApurationPanel(r)}</div>
+  <div class="page-head president-head"><div><div class="eyebrow">Brasil · 1º turno</div><h1 class="page-title">Presidente da República</h1><div class="page-sub">Resultado do 1º turno preservado para consulta.</div></div>${presidentApurationPanel(r)}</div>
+  ${presidentModeTabs('round1')}
   ${electionAlert(r,'1')}
   <div class="pres-grid section">
     <section class="card pad"><div class="section-head"><div><div class="eyebrow">Placar oficial</div><div class="section-title">Candidatos</div></div><div class="section-note">${r.candidatos.length} candidaturas</div></div><div class="candidate-list">${orderedCandidates(r).map((c,i)=>candidateRow(c,r,'1',i)).join('')}</div></section>
@@ -557,7 +690,8 @@ async function loadPresident(force=false){
       <div class="card pad"><div class="eyebrow">Votos</div><div class="section-title">Composição</div>${donut(r)}<div class="stats-grid"><div class="stat-box"><span>Eleitorado</span><strong>${fmt(r.eleitorado)}</strong></div><div class="stat-box"><span>Comparecimento</span><strong>${fmt(r.comparecimento)}</strong></div><div class="stat-box"><span>Abstenção</span><strong>${fmt(r.abstencao)}</strong></div><div class="stat-box"><span>Válidos</span><strong>${fmt(r.validos)}</strong></div></div></div>
       <div class="card pad"><div class="eyebrow">Evolução local</div><div class="section-title">Percentuais ao longo das atualizações</div><div style="margin-top:9px">${evolution()}</div></div>
     </aside>
-  </div>`;syncFavoriteButtons();wireFavorites(host);
+  </div>`;
+  wirePresidentModeTabs();syncFavoriteButtons();wireFavorites(host);
 }
 function buildStateToolbar(){
   const opts=UFS.map(([u,n])=>`<option value="${u}" ${u===S.uf?'selected':''}>${n} (${u})</option>`).join('');
