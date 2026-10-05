@@ -1,4 +1,4 @@
-/* Apuracao 2026 browser bundle v5.12 */
+/* Apuracao 2026 browser bundle v5.13 */
 function tseInt(v){return Number(String(v??'0').replace(/\./g,'').replace(',','.'))||0}
 function tsePct(v){return Number(String(v??'0').replace(',','.'))||0}
 function roundQE(vv,seats){if(seats<=0)return 0;const raw=vv/seats,f=Math.floor(raw);return raw-f>0.5?f+1:f}
@@ -663,11 +663,19 @@ async function loadPollData(force=false){
 function pollValue(v){
   return Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:Number(v)%1?1:0,maximumFractionDigits:1})+'%';
 }
+function presidentialIdentity(candidateOrName,party=''){
+  const obj=typeof candidateOrName==='object'&&candidateOrName?candidateOrName:null;
+  const name=String(obj?.nome||obj?.name||candidateOrName||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+  const sigla=String(obj?.partido||obj?.party||party||'').toUpperCase();
+  if(name.includes('LULA')||sigla==='PT')return{key:'lula',color:'#E30613',soft:'#FDE8EA',label:'Lula'};
+  if(name.includes('FLAVIO')||name.includes('FLÁVIO'))return{key:'flavio',color:'#1565C0',soft:'#E8F1FB',label:'Flávio'};
+  return{key:'other',color:'#7C3AED',soft:'#F1EBFD',label:String(obj?.nome||obj?.name||candidateOrName||'')};
+}
 function pollCard(p){
   const cs=(p.candidates||[]).slice(0,2);
   return `<article class="poll-card">
     <div class="poll-card-head"><div><span class="eyebrow">${esc(p.institute)}</span><strong>${new Date(p.published+'T12:00:00').toLocaleDateString('pt-BR')}</strong></div><span class="poll-phase">${esc(p.phase||'')}</span></div>
-    <div class="poll-bars">${cs.map((c,i)=>`<div class="poll-row"><div class="poll-row-head"><span>${esc(c.name)} <small>${esc(c.party)}</small></span><strong>${pollValue(c.value)}</strong></div><div class="poll-track"><span class="${i===0?'a':'b'}" style="width:${clamp(c.value)}%"></span></div></div>`).join('')}</div>
+    <div class="poll-bars">${cs.map(c=>{const id=presidentialIdentity(c.name,c.party);return `<div class="poll-row poll-candidate-${id.key}" style="--candidate-color:${id.color};--candidate-soft:${id.soft}"><div class="poll-row-head"><span><i class="candidate-color-dot"></i>${esc(c.name)} <small>${esc(c.party)}</small></span><strong>${pollValue(c.value)}</strong></div><div class="poll-track"><span style="width:${clamp(c.value)}%;background:var(--candidate-color)"></span></div></div>`}).join('')}</div>
     <div class="poll-other">${p.blankNull!==null&&p.blankNull!==undefined?`<span>Branco/nulo <b>${pollValue(p.blankNull)}</b></span>`:''}${p.undecided!==null&&p.undecided!==undefined?`<span>Indecisos <b>${pollValue(p.undecided)}</b></span>`:''}</div>
     <div class="poll-meta">
       <span>Campo: ${new Date(p.fieldStart+'T12:00:00').toLocaleDateString('pt-BR')}–${new Date(p.fieldEnd+'T12:00:00').toLocaleDateString('pt-BR')}</span>
@@ -710,10 +718,11 @@ async function renderPollsPresident(host,r1,force=false){
 function secondRoundFaceoffCard(c,r1,r2,index){
   const old=r1?.candidatos?.find(x=>String(x.numero)===String(c.numero));
   const state=r2?candidateCardState(c,r2,'1',index):{elected:false,runoff:true,oi:null};
-  const cls=state.elected?' official-card-green':state.runoff?' official-card-orange':'';
-  return `<article class="round2-candidate${cls}">
+  const id=presidentialIdentity(c);
+  const cls=state.elected?' official-card-green':'';
+  return `<article class="round2-candidate round2-candidate-${id.key}${cls}" style="--candidate-color:${id.color};--candidate-soft:${id.soft}">
     ${avatar(c,'large')}
-    <div class="round2-candidate-main"><span class="result-context">${esc(c.numero)} · ${esc(c.partido)}</span><h3>${esc(c.nome)}</h3>
+    <div class="round2-candidate-main"><span class="result-context"><i class="candidate-color-dot"></i>${esc(c.numero)} · ${esc(c.partido)}</span><h3>${esc(c.nome)}</h3>
       <div class="round2-votes">${r2?`<strong>${fmt(c.votos)}</strong> votos · <b>${pct(c.pct)}</b>`:`<strong>${fmt(old?.votos||c.votos)}</strong> votos no 1º turno · <b>${pct(old?.pct||c.pct)}</b>`}</div>
       ${old&&r2?`<small>1º turno: ${fmt(old.votos)} votos · ${pct(old.pct)}</small>`:''}
       ${state.oi?`<span class="${state.oi.cls}">${esc(state.oi.label)}</span>`:'<span class="leader-badge">CLASSIFICADO AO 2º TURNO · TSE</span>'}
@@ -764,7 +773,7 @@ async function renderSecondRoundPresident(host,r1,force=false){
       <div class="section-head"><div><div class="eyebrow">${r2?'TSE · 2º turno':'Confronto presidencial'}</div><div class="section-title">${r2?'Apuração ao vivo':'Classificados pelo TSE'}</div></div><div class="section-note">${S.codes.fed2?'código TSE do 2º turno detectado':'aguardando código TSE do 2º turno'}</div></div>
       ${r2?sectionsBadge(r2):'<div class="round2-prep-note">O app continuará consultando a configuração oficial do TSE. Assim que o pleito de 2º turno aparecer, passa a usar o novo arquivo sem perder o histórico do 1º turno.</div>'}
       <div class="round2-faceoff">${candidates.map((c,i)=>secondRoundFaceoffCard(c,r1,r2,i)).join('')}</div>
-      ${diff?`<div class="round2-difference"><span>Diferença agora</span><strong>${fmt(diff.votes)} votos</strong><small>${pct(diff.pctGap)} p.p. · liderança não significa resultado oficial</small></div>`:''}
+      ${diff?(()=>{const id=presidentialIdentity(diff.leader);return `<div class="round2-difference" style="--candidate-color:${id.color}"><span>Diferença agora</span><strong><i class="candidate-color-dot"></i>${fmt(diff.votes)} votos</strong><small>${esc(diff.leader.nome)} à frente · ${pct(diff.pctGap)} p.p. · liderança não significa resultado oficial</small></div>`})():''}
       ${r2?electionAlert(r2,'1'):''}
     </section>
     <section class="section"><div class="section-head"><div><div class="eyebrow">Governadores</div><div class="section-title">Estados com 2º turno</div></div><div class="section-note">${govLoaded?round2GovernorStates(gov).length+' UF(s)':'carregando estados…'}</div></div>${govLoaded?round2GovernorCards(gov):'<div class="card empty">Carregando confrontos estaduais em segundo plano…</div>'}</section>
