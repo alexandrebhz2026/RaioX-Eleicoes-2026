@@ -326,7 +326,6 @@ function evolution(){
   const lines=ids.map((id,k)=>{const pts=h.map((a,i)=>{const c=a.top.find(x=>x.id===id);return c?x(i)+','+y(c.p):null}).filter(Boolean).join(' ');const name=h.flatMap(a=>a.top).find(c=>c.id===id)?.n||id;return `<polyline points="${pts}" fill="none" stroke="${COLORS[k]}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><text x="${pad+3}" y="${18+k*14}" fill="${COLORS[k]}" font-size="9">${esc(name)}</text>`}).join('');
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Evolução da apuração">${lines}</svg>`;
 }
-async 
 function secondRoundHomeCallout(pres,gov){
   if(pres?.meta?.md!=='s')return'';
   const cs=firstRoundRunoffCandidates(pres),count=round2GovernorStates(gov).length,cd=secondRoundCountdown();
