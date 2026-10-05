@@ -295,18 +295,54 @@ function evolution(){
   const lines=ids.map((id,k)=>{const pts=h.map((a,i)=>{const c=a.top.find(x=>x.id===id);return c?x(i)+','+y(c.p):null}).filter(Boolean).join(' ');const name=h.flatMap(a=>a.top).find(c=>c.id===id)?.n||id;return `<polyline points="${pts}" fill="none" stroke="${COLORS[k]}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><text x="${pad+3}" y="${18+k*14}" fill="${COLORS[k]}" font-size="9">${esc(name)}</text>`}).join('');
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Evolução da apuração">${lines}</svg>`;
 }
-async function loadAgora(force=false){
+async 
+function secondRoundHomeCallout(pres,gov){
+  if(pres?.meta?.md!=='s')return'';
+  const cs=firstRoundRunoffCandidates(pres),count=round2GovernorStates(gov).length,cd=secondRoundCountdown();
+  return `<section class="card round2-home-callout">
+    <div class="round2-home-copy"><span class="eyebrow">2º turno · 25/10</span><h2>${cs.map(c=>esc(c.nome)).join(' × ')}</h2><p>${cd.label} · ${count} UF(s) com segundo turno para governador.</p></div>
+    <div class="round2-home-actions"><button class="primary-btn" data-president-mode="round2" data-open-president>Ver 2º turno</button><button class="ghost-btn" data-president-mode="polls" data-open-president>Pesquisas</button></div>
+  </section>`;
+}
+function wireSecondRoundHome(){
+  $('[data-open-president]').forEach(b=>b.onclick=()=>{S.presidentMode=b.dataset.presidentMode||'round2';showView('presidente')});
+}
+async function loadSecondRoundHome(host,force=false){
+  const [r1,r2,gov]=await Promise.all([
+    fetchResult('1','BR',force,1),
+    fetchResult('1','BR',force,2),
+    governorSummaryClient(force)
+  ]);
+  S.governors=gov;
+  const cands=r2.candidatos.slice(0,2),diff=round2Difference(r2);
+  host.innerHTML=`<div class="page-head"><div><div class="eyebrow">Eleições Gerais 2026 · 2º turno</div><h1 class="page-title">Apuração em tempo real</h1><div class="page-sub">Dados oficiais do TSE referentes ao 2º turno.</div></div><div class="source-pill"><span class="live-dot"></span> Fonte oficial · TSE</div></div>
+    <section class="card round2-live-home">
+      <div class="section-head"><div><div class="eyebrow">Presidente · Brasil</div><div class="section-title">${r2.meta?.md==='e'?'Resultado definido pelo TSE':'2º turno em apuração'}</div></div><button class="card-action" data-president-mode="round2" data-open-president>Detalhes <span>→</span></button></div>
+      ${sectionsBadge(r2)}
+      <div class="round2-faceoff">${cands.map((c,i)=>secondRoundFaceoffCard(c,r1,r2,i)).join('')}</div>
+      ${diff?`<div class="round2-difference"><span>Diferença agora</span><strong>${fmt(diff.votes)} votos</strong><small>${pct(diff.pctGap)} p.p. · liderança não é resultado oficial</small></div>`:''}
+      ${electionAlert(r2,'1')}
+    </section>
+    <section class="section"><div class="section-head"><div><div class="eyebrow">Governadores</div><div class="section-title">2º turno por UF</div></div><div class="section-note">${round2GovernorStates(gov).length} disputa(s)</div></div>${round2GovernorCards(gov)}</section>
+    ${liveEventsPanel()}
+    <section class="section"><div class="info-grid"><div class="card info-card"><h3>Pesquisas</h3><p>Compare os levantamentos por instituto, data, amostra e margem de erro. O app não cria média própria.</p><button class="card-action" data-president-mode="polls" data-open-president>Ver pesquisas <span>→</span></button></div><div class="card info-card"><h3>Resultados do 1º turno</h3><p>Presidente, Senado, Câmara e Assembleias continuam disponíveis nas telas originais.</p><button class="card-action" data-president-mode="round1" data-open-president>1º turno <span>→</span></button></div></div></section>`;
+  wireSecondRoundHome();wireRound2GovernorCards();wireLiveEvents();syncFavoriteButtons();wireFavorites(host);
+}
+
+function loadAgora(force=false){
   const host=$('#agoraContent');host.innerHTML='<div class="card pad loading"><div class="empty">Carregando dados oficiais do TSE…</div></div>';
   const [pres,gov]=await Promise.all([
     fetchResult('1','BR',force),
     API_BASE?governorSummaryClient(force):fetch('/api/summary'+(force?'?t='+Date.now():'')).then(r=>r.ok?r.json():null).catch(()=>null)
   ]);
   S.governors=gov;recordPresident(pres);recordMajorEvents(pres,gov);
+  if(S.codes.fed2&&Date.now()>=ROUND2_ELECTION_DAY.getTime()){await loadSecondRoundHome(host,force);return}
   const official=officialSelected(pres,'1');
   const defined=pres.meta.md==='e'?'Eleito definido':pres.meta.md==='s'?'2º turno definido':pres.meta.tf==='s'?'Final':'Em apuração';
   const govDefined=(gov?.states||[]).filter(x=>x.md==='e'||x.md==='s'||x.tf==='s').length;
   host.innerHTML=`
     <div class="page-head"><div><div class="eyebrow">Eleições Gerais 2026</div><h1 class="page-title">Apuração em tempo real</h1><div class="page-sub">Dados oficiais do TSE, com atualização automática a cada 30 segundos.</div></div><div class="source-pill"><span class="live-dot"></span> Fonte oficial · TSE</div></div>
+    ${secondRoundHomeCallout(pres,gov)}
     <div class="hero-grid">
       <section class="card hero-card"><div class="section-head"><div><div class="eyebrow">Presidente · Brasil</div><div class="section-title">${esc(defined)}</div></div><button class="card-action" data-go="presidente">Detalhes <span>→</span></button></div>
         <div class="progress-row"><div class="progress"><span style="width:${clamp(pres.pctTotalizado)}%"></span></div><strong class="progress-pct">${pct(pres.pctTotalizado)}</strong></div>
@@ -322,7 +358,7 @@ async function loadAgora(force=false){
     <section class="section"><div class="section-head"><div><div class="eyebrow">Mapa rápido</div><div class="section-title">Governadores por UF</div></div><div class="section-note">toque no estado · abre Senado</div></div>${governorMapPanel(gov)}</section>
     ${liveEventsPanel()}
     <section class="section"><div class="info-grid"><div class="card info-card"><h3>Câmara dos Deputados</h3><p>513 cadeiras. O painel Congresso mostra a distribuição nacional por partido/federação usando <strong>TSE agora</strong> e as cadeiras já atribuídas em cada UF.</p><button class="card-action" data-go="congresso">Congresso <span>→</span></button></div><div class="card info-card"><h3>Senado Federal</h3><p>54 vagas em disputa em 2026, duas por UF. Antes da definição oficial mostramos os dois líderes; depois, somente o status de eleito informado pelo TSE.</p><button class="card-action" data-go="congresso">Senado <span>→</span></button></div></div></section>`;
-  wireGo();wireLiveEvents();syncFavoriteButtons();wireFavorites(host);mountGovernorBrazilMap(gov);
+  wireGo();wireSecondRoundHome();wireLiveEvents();syncFavoriteButtons();wireFavorites(host);mountGovernorBrazilMap(gov);
 }
 function governorVisualState(x){
   const officials=x?.official||[];
