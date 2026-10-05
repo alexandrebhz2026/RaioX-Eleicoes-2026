@@ -330,15 +330,15 @@ async function loadSecondRoundHome(host,force=false){
 
 async function loadAgora(force=false){
   const host=$('#agoraContent');host.innerHTML='<div class="card pad loading"><div class="empty">Carregando dados oficiais do TSE…</div></div>';
-  const [pres,gov]=await Promise.all([
-    fetchResult('1','BR',force),
-    API_BASE?governorSummaryClient(force):fetch('/api/summary'+(force?'?t='+Date.now():'')).then(r=>r.ok?r.json():null).catch(()=>null)
-  ]);
-  S.governors=gov;recordPresident(pres);recordMajorEvents(pres,gov);
+  const pres=await fetchResult('1','BR',force);
+  const gov=S.governors||{states:[]};
+  recordPresident(pres);
+  if(S.governors)recordMajorEvents(pres,gov);
   if(S.codes.fed2&&Date.now()>=ROUND2_ELECTION_DAY.getTime()){await loadSecondRoundHome(host,force);return}
   const official=officialSelected(pres,'1');
   const defined=pres.meta.md==='e'?'Eleito definido':pres.meta.md==='s'?'2º turno definido':pres.meta.tf==='s'?'Final':'Em apuração';
   const govDefined=(gov?.states||[]).filter(x=>x.md==='e'||x.md==='s'||x.tf==='s').length;
+  const govLoaded=(gov?.states||[]).length>0;
   host.innerHTML=`
     <div class="page-head"><div><div class="eyebrow">Eleições Gerais 2026</div><h1 class="page-title">Apuração em tempo real</h1><div class="page-sub">Dados oficiais do TSE, com atualização automática a cada 30 segundos.</div></div><div class="source-pill"><span class="live-dot"></span> Fonte oficial · TSE</div></div>
     ${secondRoundHomeCallout(pres,gov)}
@@ -350,14 +350,21 @@ async function loadAgora(force=false){
       </section>
       <aside class="metric-stack">
         <div class="card metric-card"><div class="metric-label">Situação presidencial</div><div class="metric-value" style="font-size:20px">${esc(official[0]?.situacaoOficial||official[0]?.nome||defined)}</div><div class="metric-foot">${official.length?official.length+' candidato(s) marcado(s) pelo TSE':'sem definição oficial ainda'}</div></div>
-        <div class="card metric-card"><div class="metric-label">Governadores definidos</div><div class="metric-value">${govDefined}<span style="font-size:14px;color:var(--muted)"> / 27</span></div><div class="metric-foot">eleito, 2º turno ou totalização final</div></div>
+        <div class="card metric-card"><div class="metric-label">Governadores definidos</div><div class="metric-value">${govLoaded?govDefined:'…'}<span style="font-size:14px;color:var(--muted)"> / 27</span></div><div class="metric-foot">${govLoaded?'eleito, 2º turno ou totalização final':'carregando estados em segundo plano'}</div></div>
         <div class="card metric-card"><div class="metric-label">Próxima atualização</div><div class="metric-value" style="font-size:20px">30 segundos</div><div class="metric-foot">somente nas telas em uso</div></div>
       </aside>
     </div>
-    <section class="section"><div class="section-head"><div><div class="eyebrow">Mapa rápido</div><div class="section-title">Governadores por UF</div></div><div class="section-note">toque no estado · abre Senado</div></div>${governorMapPanel(gov)}</section>
+    <section class="section"><div class="section-head"><div><div class="eyebrow">Mapa rápido</div><div class="section-title">Governadores por UF</div></div><div class="section-note">${govLoaded?'toque no estado · abre resumo':'carregando estados…'}</div></div>${governorMapPanel(gov)}</section>
     ${liveEventsPanel()}
     <section class="section"><div class="info-grid"><div class="card info-card"><h3>Câmara dos Deputados</h3><p>513 cadeiras. O painel Congresso mostra a distribuição nacional por partido/federação usando <strong>TSE agora</strong> e as cadeiras já atribuídas em cada UF.</p><button class="card-action" data-go="congresso">Congresso <span>→</span></button></div><div class="card info-card"><h3>Senado Federal</h3><p>54 vagas em disputa em 2026, duas por UF. Antes da definição oficial mostramos os dois líderes; depois, somente o status de eleito informado pelo TSE.</p><button class="card-action" data-go="congresso">Senado <span>→</span></button></div></div></section>`;
   wireGo();wireSecondRoundHome();wireLiveEvents();syncFavoriteButtons();wireFavorites(host);mountGovernorBrazilMap(gov);
+
+  if((!S.governors||force)&&S.view==='agora'){
+    governorSummaryClient(force).then(fresh=>{
+      S.governors=fresh;recordMajorEvents(pres,fresh);
+      if(S.view==='agora')loadAgora(false);
+    }).catch(()=>{});
+  }
 }
 function governorVisualState(x){
   const officials=x?.official||[];
@@ -709,13 +716,13 @@ function wireRound2GovernorCards(){
   $$('[data-round2-uf]').forEach(b=>b.onclick=()=>openRound2Governor(b.dataset.round2Uf));
 }
 async function renderSecondRoundPresident(host,r1,force=false){
-  const gov=S.governors&&!force?S.governors:await governorSummaryClient(force);
-  S.governors=gov;
+  const gov=S.governors||{states:[]};
   let r2=null;
   if(S.codes.fed2){try{r2=await fetchResult('1','BR',force,2)}catch{}}
   const candidates=r2?.candidatos?.slice(0,2)||firstRoundRunoffCandidates(r1);
   const countdown=secondRoundStage(),diff=r2?round2Difference(r2):null;
   const pollData=await loadPollData(false).catch(()=>null);
+  const govLoaded=(gov?.states||[]).length>0;
   host.innerHTML=`<div class="page-head"><div><div class="eyebrow">Brasil · 2º turno</div><h1 class="page-title">Presidente da República</h1><div class="page-sub">${r2?'Apuração oficial do 2º turno em tempo real.':'Confronto definido pelo TSE · votação em 25/10/2026.'}</div></div><div class="round2-countdown"><span>${r2?'Apuração do 2º turno':countdown.label}</span><strong>${r2?pct(r2.pctTotalizado):countdown.short}</strong></div></div>
     ${presidentModeTabs('round2')}
     <section class="card round2-hero">
@@ -725,11 +732,17 @@ async function renderSecondRoundPresident(host,r1,force=false){
       ${diff?`<div class="round2-difference"><span>Diferença agora</span><strong>${fmt(diff.votes)} votos</strong><small>${pct(diff.pctGap)} p.p. · liderança não significa resultado oficial</small></div>`:''}
       ${r2?electionAlert(r2,'1'):''}
     </section>
-    <section class="section"><div class="section-head"><div><div class="eyebrow">Governadores</div><div class="section-title">Estados com 2º turno</div></div><div class="section-note">${round2GovernorStates(gov).length} UF(s)</div></div>${round2GovernorCards(gov)}</section>
+    <section class="section"><div class="section-head"><div><div class="eyebrow">Governadores</div><div class="section-title">Estados com 2º turno</div></div><div class="section-note">${govLoaded?round2GovernorStates(gov).length+' UF(s)':'carregando estados…'}</div></div>${govLoaded?round2GovernorCards(gov):'<div class="card empty">Carregando confrontos estaduais em segundo plano…</div>'}</section>
     <section class="section"><div class="section-head"><div><div class="eyebrow">Pesquisas</div><div class="section-title">Levantamentos recentes</div></div><button class="card-action" data-president-mode="polls">Ver todas <span>→</span></button></div>${pollData?pollsPanel(pollData,{limit:3,scope:'BR'}):'<div class="card empty">Pesquisas indisponíveis agora.</div>'}</section>`;
   wirePresidentModeTabs();wireRound2GovernorCards();syncFavoriteButtons();wireFavorites(host);
-}
 
+  if((!S.governors||force)&&S.view==='presidente'&&S.presidentMode==='round2'){
+    governorSummaryClient(force).then(fresh=>{
+      S.governors=fresh;
+      if(S.view==='presidente'&&S.presidentMode==='round2')renderSecondRoundPresident(host,r1,false);
+    }).catch(()=>{});
+  }
+}
 async function loadPresident(force=false){
   const host=$('#presidentContent');host.innerHTML='<div class="card pad loading"><div class="empty">Carregando Presidente…</div></div>';
   const r=await fetchResult('1','BR',force,1);recordPresident(r);
