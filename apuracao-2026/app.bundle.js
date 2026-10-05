@@ -1,4 +1,4 @@
-/* Apuracao 2026 browser bundle v5.8 */
+/* Apuracao 2026 browser bundle v5.9 */
 function tseInt(v){return Number(String(v??'0').replace(/\./g,'').replace(',','.'))||0}
 function tsePct(v){return Number(String(v??'0').replace(',','.'))||0}
 function roundQE(vv,seats){if(seats<=0)return 0;const raw=vv/seats,f=Math.floor(raw);return raw-f>0.5?f+1:f}
@@ -1344,8 +1344,13 @@ function setTheme(t){document.documentElement.dataset.theme=t;localStorage.setIt
 function initTheme(){const t=localStorage.getItem('ap26-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');setTheme(t)}
 async function boot(){
   initTheme();$('#themeBtn').onclick=()=>setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');$('#refreshBtn').onclick=()=>loadView(S.view,true);
-  $$('[data-view]').forEach(b=>b.onclick=()=>showView(b.dataset.view));$('.brand').onclick=()=>showView('agora');
+  $('[data-view]').forEach(b=>b.onclick=()=>showView(b.dataset.view));$('.brand').onclick=()=>showView('agora');
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')loadView(S.view,true)});
-  await discoverCodes();updateFavoriteBadges();showView('agora');
+  const qs=new URLSearchParams(location.search);
+  const requestedView=qs.get('view');
+  const requestedMode=qs.get('mode');
+  if(['auto','round1','round2','polls'].includes(requestedMode||''))S.presidentMode=requestedMode;
+  await discoverCodes();updateFavoriteBadges();
+  showView(['agora','presidente','estados','congresso','eleitos','favoritos','buscar','como'].includes(requestedView||'')?requestedView:'agora');
 }
 boot();
