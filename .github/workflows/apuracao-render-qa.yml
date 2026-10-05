@@ -42,6 +42,9 @@ jobs:
             exit 1
           fi
           grep -q "Mobile horizontal overflow hardening v5.3" apuracao-2026/app.css
+          grep -q "mobile-seat-cards" apuracao-2026/app.bundle.js
+          grep -q "Mobile seat cards v5.4" apuracao-2026/app.css
+          grep -q "desktop-seat-table{display:none" apuracao-2026/app.css
           grep -q "card-action" apuracao-2026/app.css
           grep -q "favorite-btn" apuracao-2026/app.css
           grep -q "view-eleitos" apuracao-2026/index.html
