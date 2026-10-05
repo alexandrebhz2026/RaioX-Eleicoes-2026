@@ -8,7 +8,7 @@ const CARGO={'1':'Presidente','3':'Governador','5':'Senador','6':'Deputado Feder
 const COLORS=['#7c3aed','#2563eb','#0891b2','#0f9f6e','#d97706','#db2777','#4f46e5','#65a30d','#ea580c','#9333ea','#0284c7','#059669','#ca8a04','#be123c','#6366f1','#15803d','#c2410c','#a21caf'];
 const S={
   codes:{fed:'6257',est:'6259',fed2:null,est2:null},view:'agora',uf:'MG',cargo:'3',cache:new Map(),governors:null,
-  congress:{camara:null,senado:null},poll:null,loading:new Set(),lastRefresh:null,candidateIndex:new Map(),electedMode:'official',electedUf:'MG',electedCargo:'all',
+  congress:{camara:null,senado:null},poll:null,loading:new Set(),lastRefresh:null,candidateIndex:new Map(),electedMode:'official',electedUf:'MG',electedCargo:'all',electedName:'',electedParty:'all',
   presidentMode:'auto',pollData:null,pollScope:'BR',round2Ready:false
 };
 const API_BASE=location.hostname.endsWith('.vercel.app')?'':'https://apuracao-2026-lake.vercel.app';
@@ -958,7 +958,7 @@ function electedCandidateCard(c,{cargo='',uf='',kind='official',status='',reason
   const reasonText=reason==='QP'?'QP':/média/.test(String(reason))?'sobra/média':'';
   const shownStatus=status||(kind==='official'?'ELEITO TSE':'PROJETADO ELEITO · cálculo atual');
   const visual=visualClassFromStatus(shownStatus,kind);
-  return `<div class="elected-candidate-card${visual}">
+  return `<div class="elected-candidate-card${visual}" data-candidate-name="${esc(c.nome)}" data-candidate-party="${esc(c.partido||'')}">
     ${avatar(c)}
     <div class="elected-candidate-main"><div class="result-context">${esc(CARGO[String(cargo||c.cargoCodigo)]||'Candidato')} · ${esc(uf||c.uf||'')}</div><div class="cand-name">${esc(c.nome)}</div><div class="cand-meta">${esc(c.numero)} · ${esc(c.partido)} · ${fmt(c.votos)} votos</div>
       ${electedStatusBadge(kind,shownStatus)}${reasonText?`<span class="reason-badge">${esc(reasonText)}</span>`:''}
@@ -978,9 +978,107 @@ function electedSection(title,subtitle,html,count=0){
   return `<section class="card elected-section"><div class="section-head"><div><div class="eyebrow">${esc(subtitle)}</div><div class="section-title">${esc(title)}</div></div><div class="section-note">${fmt(count)} resultado(s)</div></div><div class="elected-list">${html||'<div class="empty">Nenhum resultado neste filtro.</div>'}</div></section>`;
 }
 function wireElectedControls(){
-  $$('[data-elected-mode]').forEach(b=>b.onclick=()=>{S.electedMode=b.dataset.electedMode;loadElected(false)});
-  $('#electedUf')?.addEventListener('change',e=>{S.electedUf=e.target.value;S.electedCargo='all';loadElected(false)});
-  $('#electedCargo')?.addEventListener('change',e=>{S.electedCargo=e.target.value;loadElected(false)});
+  $('[data-elected-mode]').forEach(b=>b.onclick=()=>{S.electedMode=b.dataset.electedMode;loadElected(false)});
+  $('#electedUf')?.addEventListener('change',e=>{S.electedUf=e.target.value;S.electedCargo='all';S.electedName='';S.electedParty='all';loadElected(false)});
+  $('#electedCargo')?.addEventListener('change',e=>{S.electedCargo=e.target.value;S.electedName='';S.electedParty='all';loadElected(false)});
+}
+function normalizeElectedSearch(v){
+  return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+}
+function enhanceDeputyElectedView(){
+  const cargo=String(S.electedCargo||'');
+  if(!['6','7','8'].includes(cargo))return;
+  const controls=$('#electedContent .elected-controls');
+  const section=$('#electedContent .elected-section');
+  const list=section?.querySelector('.elected-list');
+  if(!controls||!section||!list)return;
+  const cards=[...list.querySelectorAll('.elected-candidate-card')];
+  if(!cards.length)return;
+
+  const rows=cards.map(card=>({
+    card,
+    name:card.dataset.candidateName||card.querySelector('.cand-name')?.textContent||'',
+    party:card.dataset.candidateParty||'OUTROS'
+  }));
+  const parties=[...new Set(rows.map(x=>x.party).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  if(S.electedParty!=='all'&&!parties.includes(S.electedParty))S.electedParty='all';
+
+  const tools=document.createElement('div');
+  tools.className='deputy-elected-tools';
+  tools.innerHTML=`<label class="deputy-search-wrap"><span aria-hidden="true">⌕</span><input id="electedNameFilter" type="search" autocomplete="off" placeholder="Buscar deputado pelo nome" value="${esc(S.electedName||'')}" aria-label="Buscar deputado pelo nome"></label>
+    <select id="electedPartyFilter" class="select" aria-label="Filtrar deputados por partido">
+      <option value="all">Todos os partidos</option>
+      ${parties.map(p=>`<option value="${esc(p)}" ${S.electedParty===p?'selected':''}>${esc(p)}</option>`).join('')}
+    </select>
+    <button id="clearDeputyFilters" class="ghost-btn deputy-clear-btn" type="button">Limpar</button>`;
+  controls.appendChild(tools);
+
+  const counts=new Map();
+  for(const x of rows)counts.set(x.party,(counts.get(x.party)||0)+1);
+  const distribution=[...counts.entries()].map(([party,seats])=>({party,seats})).sort((a,b)=>b.seats-a.seats||a.party.localeCompare(b.party,'pt-BR'));
+  const max=Math.max(1,...distribution.map(x=>x.seats));
+  const chartTitle=S.electedMode==='official'?'Eleitos por partido':'Projeção de bancadas por partido';
+  const chartSub=S.electedMode==='official'?'Deputados já oficializados pelo TSE neste recorte.':'Como as vagas projetadas estão distribuídas neste recorte.';
+  const summary=document.createElement('section');
+  summary.className='card deputy-party-card';
+  summary.innerHTML=`<div class="section-head deputy-party-head"><div><div class="eyebrow">Distribuição das vagas</div><div class="section-title">${chartTitle}</div><div class="deputy-party-sub">${chartSub}</div></div><div class="section-note">${fmt(rows.length)} vagas · ${fmt(distribution.length)} partido(s)</div></div>
+    <div class="deputy-party-chart">
+      ${distribution.map((x,i)=>`<button type="button" class="deputy-party-row${i>=10?' is-extra':''}" data-party-bar="${esc(x.party)}" aria-label="Filtrar por ${esc(x.party)}">
+        <span class="deputy-party-rank">${i+1}</span>
+        <strong>${esc(x.party)}</strong>
+        <span class="deputy-party-track"><i style="width:${(x.seats/max*100).toFixed(2)}%;background:${hashColor(x.party)}"></i></span>
+        <b>${fmt(x.seats)}</b>
+      </button>`).join('')}
+    </div>
+    ${distribution.length>10?'<button type="button" class="deputy-show-all" id="deputyShowAll">Ver todos os partidos</button>':''}
+    <div class="deputy-party-note">Toque em um partido no gráfico para filtrar a lista de deputados.</div>`;
+  section.parentNode.insertBefore(summary,section);
+
+  const nameInput=tools.querySelector('#electedNameFilter');
+  const partySelect=tools.querySelector('#electedPartyFilter');
+  const clearBtn=tools.querySelector('#clearDeputyFilters');
+  const empty=document.createElement('div');
+  empty.className='empty deputy-filter-empty';
+  empty.textContent='Nenhum deputado encontrado com estes filtros.';
+  empty.hidden=true;
+  list.appendChild(empty);
+
+  const apply=()=>{
+    const q=normalizeElectedSearch(S.electedName);
+    let visible=0;
+    for(const x of rows){
+      const okName=!q||normalizeElectedSearch(x.name).includes(q);
+      const okParty=S.electedParty==='all'||x.party===S.electedParty;
+      const show=okName&&okParty;
+      x.card.hidden=!show;
+      if(show)visible++;
+    }
+    empty.hidden=visible!==0;
+    const note=section.querySelector('.section-note');
+    if(note)note.textContent=`${fmt(visible)} resultado(s)`;
+    const total=$('#electedContent .elected-total strong');
+    if(total)total.textContent=fmt(visible);
+    summary.querySelectorAll('[data-party-bar]').forEach(b=>b.classList.toggle('active',S.electedParty!=='all'&&b.dataset.partyBar===S.electedParty));
+    clearBtn.disabled=!(S.electedName||S.electedParty!=='all');
+  };
+
+  nameInput.addEventListener('input',e=>{S.electedName=e.target.value;apply()});
+  partySelect.addEventListener('change',e=>{S.electedParty=e.target.value;apply()});
+  clearBtn.addEventListener('click',()=>{
+    S.electedName='';S.electedParty='all';nameInput.value='';partySelect.value='all';apply();nameInput.focus();
+  });
+  summary.querySelectorAll('[data-party-bar]').forEach(b=>b.addEventListener('click',()=>{
+    const p=b.dataset.partyBar;
+    S.electedParty=S.electedParty===p?'all':p;
+    partySelect.value=S.electedParty;
+    apply();
+    section.scrollIntoView({behavior:'smooth',block:'start'});
+  }));
+  summary.querySelector('#deputyShowAll')?.addEventListener('click',e=>{
+    const expanded=summary.classList.toggle('show-all-parties');
+    e.currentTarget.textContent=expanded?'Mostrar menos':'Ver todos os partidos';
+  });
+  apply();
 }
 async function loadElected(force=false){
   const host=$('#electedContent');if(!host)return;
@@ -1064,7 +1162,7 @@ async function loadElected(force=false){
 
   const total=mode==='official'?officialCount:projectionCount;
   host.innerHTML=`<div class="page-head"><div><div class="eyebrow">Painel consolidado</div><h1 class="page-title">Eleitos e projeções</h1><div class="page-sub">${mode==='official'?'Somente situações oficiais publicadas pelo TSE.':'Projeção dinâmica do app; não é resultado oficial.'}</div></div><div class="elected-total ${mode}"><strong>${fmt(total)}</strong><span>${mode==='official'?'oficiais neste filtro':'projetados neste filtro'}</span></div></div>${electedControls()}<div class="elected-sections">${sections.join('')}</div>`;
-  wireElectedControls();wireFavorites(host);syncFavoriteButtons();
+  wireElectedControls();enhanceDeputyElectedView();wireFavorites(host);syncFavoriteButtons();
 }
 
 const FAVORITES_KEY='ap26-favorites-v1';
