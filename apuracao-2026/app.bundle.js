@@ -1,4 +1,4 @@
-/* Apuracao 2026 browser bundle v5.7 */
+/* Apuracao 2026 browser bundle v5.8 */
 function tseInt(v){return Number(String(v??'0').replace(/\./g,'').replace(',','.'))||0}
 function tsePct(v){return Number(String(v??'0').replace(',','.'))||0}
 function roundQE(vv,seats){if(seats<=0)return 0;const raw=vv/seats,f=Math.floor(raw);return raw-f>0.5?f+1:f}
@@ -610,7 +610,8 @@ function presidentApurationPanel(r){
   </div>`;
 }
 
-const ROUND2_ELECTION_DAY=new Date('2026-10-25T17:00:00-03:00');
+const ROUND2_VOTING_START=new Date('2026-10-25T08:00:00-03:00');
+const ROUND2_APURATION_START=new Date('2026-10-25T17:00:00-03:00');
 function presidentModeTabs(active){
   return `<div class="president-mode-tabs">
     <button class="seg ${active==='round1'?'active':''}" data-president-mode="round1">1º turno</button>
@@ -624,12 +625,19 @@ function wirePresidentModeTabs(){
     showView('presidente');
   });
 }
-function secondRoundCountdown(){
-  const diff=ROUND2_ELECTION_DAY.getTime()-Date.now();
-  if(diff<=0)return{past:true,label:'Dia do 2º turno'};
-  const days=Math.floor(diff/86400000),hours=Math.floor((diff%86400000)/3600000);
-  return{past:false,label:`${days} dia(s) e ${hours}h para o 2º turno`,days,hours};
+function secondRoundStage(){
+  const now=Date.now();
+  if(now<ROUND2_VOTING_START.getTime()){
+    const diff=ROUND2_VOTING_START.getTime()-now,days=Math.floor(diff/86400000),hours=Math.floor((diff%86400000)/3600000);
+    return{phase:'countdown',label:`${days} dia(s) e ${hours}h para a votação`,short:'25 OUT'};
+  }
+  if(now<ROUND2_APURATION_START.getTime()){
+    const diff=ROUND2_APURATION_START.getTime()-now,hours=Math.floor(diff/3600000),mins=Math.floor((diff%3600000)/60000);
+    return{phase:'voting',label:`Votação em andamento · apuração em ${hours}h ${mins}min`,short:'VOTANDO'};
+  }
+  return{phase:'counting',label:S.codes.fed2?'Apuração do 2º turno disponível':'Aguardando publicação da apuração pelo TSE',short:'APURAÇÃO'};
 }
+function secondRoundCountdown(){return secondRoundStage()}
 function firstRoundRunoffCandidates(r){
   if(!r?.candidatos?.length)return[];
   return r.candidatos.slice(0,2);
@@ -658,14 +666,19 @@ function pollCard(p){
     <a class="poll-source-link" href="${esc(p.source)}" target="_blank" rel="noopener noreferrer">Abrir fonte ↗</a>
   </article>`;
 }
-function pollScopeTabs(){
-  return `<div class="poll-scope-tabs">
-    <button class="seg ${S.pollScope==='BR'?'active':''}" data-poll-scope="BR">Brasil</button>
-    <button class="seg ${S.pollScope==='MG'?'active':''}" data-poll-scope="MG">Minas Gerais</button>
-  </div>`;
+function pollScopeTabs(data){
+  const scopes=[...new Set((data?.polls||[]).map(p=>String(p.scope||'BR').toUpperCase()))];
+  if(!scopes.includes(S.pollScope))S.pollScope=scopes[0]||'BR';
+  if(scopes.length<=1)return'';
+  return `<div class="poll-scope-tabs">${scopes.map(scope=>`<button class="seg ${S.pollScope===scope?'active':''}" data-poll-scope="${esc(scope)}">${scope==='BR'?'Brasil':esc(UF_NAME[scope]||scope)}</button>`).join('')}</div>`;
 }
 function wirePollScope(){
   $$('[data-poll-scope]').forEach(b=>b.onclick=()=>{S.pollScope=b.dataset.pollScope||'BR';S.presidentMode='polls';loadPresident(false)});
+}
+function stateGovernorPolls(data,uf){
+  const rows=(data?.polls||[]).filter(p=>String(p.scope).toUpperCase()===String(uf).toUpperCase()&&p.race==='governador').sort((a,b)=>String(b.published).localeCompare(String(a.published)));
+  if(!rows.length)return'';
+  return `<section class="quick-polls"><div class="quick-block-title">Pesquisas · Governador</div><div class="poll-grid">${rows.slice(0,3).map(pollCard).join('')}</div></section>`;
 }
 function pollsPanel(data,{limit=0,scope=S.pollScope}={}){
   const polls=(data?.polls||[]).filter(p=>p.scope===scope&&p.race==='presidente').sort((a,b)=>String(b.published).localeCompare(String(a.published)));
@@ -678,7 +691,7 @@ async function renderPollsPresident(host,r1,force=false){
   const data=await loadPollData(force);
   host.innerHTML=`<div class="page-head"><div><div class="eyebrow">2º turno 2026</div><h1 class="page-title">Pesquisas eleitorais</h1><div class="page-sub">Levantamentos de diferentes institutos, exibidos individualmente e com ficha técnica.</div></div><div class="source-pill">${(data.polls||[]).length} pesquisas cadastradas</div></div>
     ${presidentModeTabs('polls')}
-    ${pollScopeTabs()}
+    ${pollScopeTabs(data)}
     <div class="card poll-context-card"><strong>Contexto</strong><span>${esc(data.note||'')}</span></div>
     ${pollsPanel(data)}`;
   wirePresidentModeTabs();wirePollScope();
@@ -716,11 +729,11 @@ async function openRound2Governor(uf){
   let r2=null,r1=null;
   try{r1=await fetchResult('3',uf,false,1)}catch{}
   if(S.codes.est2){try{r2=await fetchResult('3',uf,true,2)}catch{}}
-  const base=r2||r1,cands=r2?.candidatos?.slice(0,2)||r1?.candidatos?.slice(0,2)||[];
+  const base=r2||r1,cands=r2?.candidatos?.slice(0,2)||r1?.candidatos?.slice(0,2)||[];const pollData=await loadPollData(false).catch(()=>null);
   const diff=r2?round2Difference(r2):null;
   body.innerHTML=`<div class="quick-head"><div><span class="eyebrow">2º turno · Governador</span><h2>${esc(UF_NAME[uf]||uf)} · ${esc(uf)}</h2><p>${r2?`${fmt(r2.secoesTotalizadas)} de ${fmt(r2.secoesTotal)} seções · ${pct(r2.pctTotalizado)}`:'TSE ainda não publicou a apuração do 2º turno'}</p></div></div>
     <div class="round2-modal-candidates">${cands.map((c,i)=>candidateRow(c,base,'3',i)).join('')}</div>
-    ${diff?`<div class="round2-difference"><span>Diferença agora</span><strong>${fmt(diff.votes)} votos</strong><small>${pct(diff.pctGap)} p.p. entre os dois</small></div>`:''}`;
+    ${diff?`<div class="round2-difference"><span>Diferença agora</span><strong>${fmt(diff.votes)} votos</strong><small>${pct(diff.pctGap)} p.p. entre os dois</small></div>`:''}${pollData?stateGovernorPolls(pollData,uf):''}`;
   syncFavoriteButtons();wireFavorites(body);
 }
 function wireRound2GovernorCards(){
@@ -732,9 +745,9 @@ async function renderSecondRoundPresident(host,r1,force=false){
   let r2=null;
   if(S.codes.fed2){try{r2=await fetchResult('1','BR',force,2)}catch{}}
   const candidates=r2?.candidatos?.slice(0,2)||firstRoundRunoffCandidates(r1);
-  const countdown=secondRoundCountdown(),diff=r2?round2Difference(r2):null;
+  const countdown=secondRoundStage(),diff=r2?round2Difference(r2):null;
   const pollData=await loadPollData(false).catch(()=>null);
-  host.innerHTML=`<div class="page-head"><div><div class="eyebrow">Brasil · 2º turno</div><h1 class="page-title">Presidente da República</h1><div class="page-sub">${r2?'Apuração oficial do 2º turno em tempo real.':'Confronto definido pelo TSE · votação em 25/10/2026.'}</div></div><div class="round2-countdown"><span>${r2?'Apuração do 2º turno':countdown.label}</span><strong>${r2?pct(r2.pctTotalizado):'25 OUT'}</strong></div></div>
+  host.innerHTML=`<div class="page-head"><div><div class="eyebrow">Brasil · 2º turno</div><h1 class="page-title">Presidente da República</h1><div class="page-sub">${r2?'Apuração oficial do 2º turno em tempo real.':'Confronto definido pelo TSE · votação em 25/10/2026.'}</div></div><div class="round2-countdown"><span>${r2?'Apuração do 2º turno':countdown.label}</span><strong>${r2?pct(r2.pctTotalizado):countdown.short}</strong></div></div>
     ${presidentModeTabs('round2')}
     <section class="card round2-hero">
       <div class="section-head"><div><div class="eyebrow">${r2?'TSE · 2º turno':'Confronto presidencial'}</div><div class="section-title">${r2?'Apuração ao vivo':'Classificados pelo TSE'}</div></div><div class="section-note">${S.codes.fed2?'código TSE do 2º turno detectado':'aguardando código TSE do 2º turno'}</div></div>
@@ -1326,7 +1339,7 @@ function showView(view){
 function wireGo(){
   $$('[data-go]').forEach(b=>b.onclick=()=>showView(b.dataset.go));$$('[data-uf]').forEach(b=>b.onclick=()=>{S.uf=b.dataset.uf;S.cargo='3';showView('estados')});
 }
-function restartPoll(){clearInterval(S.poll);if(['agora','presidente','estados','congresso','eleitos','favoritos'].includes(S.view))S.poll=setInterval(()=>{if(document.visibilityState==='visible')loadView(S.view,true)},30000)}
+function restartPoll(){clearInterval(S.poll);if(['agora','presidente','estados','congresso','eleitos','favoritos'].includes(S.view))S.poll=setInterval(async()=>{if(document.visibilityState==='visible'){if(Date.now()>=new Date('2026-10-20T00:00:00-03:00').getTime())await discoverCodes();loadView(S.view,true)}},30000)}
 function setTheme(t){document.documentElement.dataset.theme=t;localStorage.setItem('ap26-theme',t);$('#themeBtn').textContent=t==='dark'?'☀':'☾'}
 function initTheme(){const t=localStorage.getItem('ap26-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');setTheme(t)}
 async function boot(){
