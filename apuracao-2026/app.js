@@ -22,6 +22,68 @@ const pct=n=>Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximu
 const clamp=n=>Math.max(0,Math.min(100,Number(n||0)));
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function hashColor(s=''){let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;return COLORS[h%COLORS.length]}
+const PARTY_COLORS={
+  AGIR:'#00A6B2',
+  AVANTE:'#F58220',
+  CIDADANIA:'#00A7CE',
+  DC:'#005CA9',
+  MDB:'#00843D',
+  MOBILIZA:'#214E8A',
+  NOVO:'#F58220',
+  PCB:'#C8102E',
+  PCDOB:'#D71920',
+  PCO:'#D71920',
+  PDT:'#E31B23',
+  PL:'#0052A4',
+  PMB:'#D81B60',
+  PODE:'#00A99D',
+  PODEMOS:'#00A99D',
+  PP:'#0050A4',
+  PRD:'#225AA8',
+  PRTB:'#1D4D3E',
+  PSB:'#F2C500',
+  PSD:'#00529B',
+  PSDB:'#005CA9',
+  PSOL:'#F4C300',
+  PSTU:'#C8102E',
+  PT:'#E30613',
+  PV:'#008C45',
+  REDE:'#00A859',
+  REPUBLICANOS:'#00529B',
+  SOLIDARIEDADE:'#F58220',
+  UNIAO:'#0066B3',
+  UP:'#6A1B9A'
+};
+const FEDERATION_PARTIES=[
+  {test:/BRASIL\s+DA\s+ESPERANCA|FE\s+BRASIL/,parties:['PT','PCDOB','PV']},
+  {test:/PSDB.*CIDADANIA|CIDADANIA.*PSDB/,parties:['PSDB','CIDADANIA']},
+  {test:/PSOL.*REDE|REDE.*PSOL/,parties:['PSOL','REDE']}
+];
+function partyKey(v=''){
+  return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+}
+function partyColor(v=''){
+  const key=partyKey(v);
+  return PARTY_COLORS[key]||hashColor(key||v);
+}
+function federationParties(v=''){
+  const raw=String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+  const exact=FEDERATION_PARTIES.find(x=>x.test.test(raw));
+  if(exact)return exact.parties;
+  const tokens=raw.split(/[^A-Z0-9]+/).map(partyKey).filter(Boolean);
+  const parties=[...new Set(tokens.filter(t=>PARTY_COLORS[t]))];
+  return parties.length>1?parties:[];
+}
+function politicalColor(v=''){
+  const fed=federationParties(v);
+  return fed.length?partyColor(fed[0]):partyColor(v);
+}
+function politicalFill(v=''){
+  const fed=federationParties(v);
+  if(fed.length<2)return politicalColor(v);
+  const stops=fed.map((p,i)=>`${partyColor(p)} ${Math.round(i/fed.length*100)}% ${Math.round((i+1)/fed.length*100)}%`).join(',');
+  return `linear-gradient(90deg,${stops})`;
+}
 function tsePath(path){return apiUrl('/api/tse?path='+encodeURIComponent(path))}
 function electionCode(cargo,round=1){
   const isFed=String(cargo)==='1';
@@ -820,7 +882,7 @@ function renderMajorState(r,cargo){
 function officialSeatBar(r){
   const rows=r.partidos.map(g=>({sigla:g.sigla,seats:g.vagasOficiais||0})).filter(x=>x.seats>0).sort((a,b)=>b.seats-a.seats),total=Math.max(1,rows.reduce((s,x)=>s+x.seats,0));
   if(!rows.length)return '<div class="empty">O TSE ainda não atribuiu cadeiras.</div>';
-  return `<div class="seat-bar">${rows.map(x=>`<span title="${esc(x.sigla)} · ${x.seats}" style="width:${x.seats/total*100}%;background:${hashColor(x.sigla)}"></span>`).join('')}</div><div class="seat-legend">${rows.slice(0,10).map(x=>`<span><i class="legend-dot" style="display:inline-block;background:${hashColor(x.sigla)}"></i> ${esc(x.sigla)} ${x.seats}</span>`).join('')}</div>`;
+  return `<div class="seat-bar">${rows.map(x=>`<span title="${esc(x.sigla)} · ${x.seats}" style="width:${x.seats/total*100}%;background:${politicalFill(x.sigla)}"></span>`).join('')}</div><div class="seat-legend">${rows.slice(0,10).map(x=>`<span><i class="legend-dot" style="display:inline-block;background:${politicalFill(x.sigla)}"></i> ${esc(x.sigla)} ${x.seats}</span>`).join('')}</div>`;
 }
 function renderProportionalCandidateRanking(r,cargo,calc){
   const list=orderedCandidates(r);
@@ -912,7 +974,7 @@ function renderProportional(r,cargo){
   </div>`;
 }
 function createHemicycle(groups,totalSeats=513){
-  const seats=[];for(const g of groups)for(let i=0;i<g.seats;i++)seats.push({color:hashColor(g.sigla),sigla:g.sigla});
+  const seats=[];for(const g of groups)for(let i=0;i<g.seats;i++)seats.push({color:politicalColor(g.sigla),sigla:g.sigla});
   while(seats.length<totalSeats)seats.push({color:'var(--border)',sigla:'não atribuída'});seats.length=totalSeats;
   const rings=12,rads=Array.from({length:rings},(_,i)=>62+i*14),sum=rads.reduce((a,b)=>a+b,0),counts=rads.map(r=>Math.floor(totalSeats*r/sum));let diff=totalSeats-counts.reduce((a,b)=>a+b,0);for(let i=rings-1;diff>0;i=(i-1+rings)%rings,diff--)counts[i]++;
   let idx=0,circles='';for(let ri=0;ri<rings;ri++){const count=counts[ri],rad=rads[ri];for(let j=0;j<count;j++){const a=Math.PI+(Math.PI*(j+.5)/count),x=260+Math.cos(a)*rad,y=222+Math.sin(a)*rad,s=seats[idx++];circles+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.1" fill="${s.color}"><title>${esc(s.sigla)}</title></circle>`}}
@@ -920,7 +982,7 @@ function createHemicycle(groups,totalSeats=513){
 }
 function bars(rows,key='seats',maxRows=14){
   const data=rows.slice().sort((a,b)=>(b[key]||0)-(a[key]||0)).slice(0,maxRows),max=Math.max(1,...data.map(x=>x[key]||0));
-  return `<div class="chart-bars">${data.map(x=>`<div class="chart-row"><div class="chart-label">${esc(x.sigla)}</div><div class="chart-track"><span style="width:${(x[key]||0)/max*100}%;background:${hashColor(x.sigla)}"></span></div><div class="chart-value">${fmt(x[key]||0)}</div></div>`).join('')}</div>`;
+  return `<div class="chart-bars">${data.map(x=>`<div class="chart-row"><div class="chart-label">${esc(x.sigla)}</div><div class="chart-track"><span style="width:${(x[key]||0)/max*100}%;background:${politicalFill(x.sigla)}"></span></div><div class="chart-value">${fmt(x[key]||0)}</div></div>`).join('')}</div>`;
 }
 async function loadCongress(force=false){
   const host=$('#congressContent');host.innerHTML='<div class="page-head"><div><div class="eyebrow">Congresso Nacional</div><h1 class="page-title">Câmara e Senado</h1></div></div><div class="card pad loading"><div class="empty">Carregando as 27 UFs em lotes seguros…</div></div>';
@@ -934,7 +996,7 @@ async function loadCongress(force=false){
   host.innerHTML=`
   <div class="page-head"><div><div class="eyebrow">Congresso Nacional</div><h1 class="page-title">Câmara e Senado</h1><div class="page-sub">Distribuição oficial atualizada UF por UF. Cadeiras ainda não atribuídas permanecem neutras.</div></div><div class="source-pill">${cam.ufsLoaded}/27 UFs carregadas</div></div>
   <div class="congress-top">
-    <section class="card hemi-card"><div class="section-head"><div><div class="eyebrow">Câmara dos Deputados</div><div class="section-title">Hemiciclo · TSE agora</div></div><div class="section-note">${seats} de ${cam.seatsTotal||513} cadeiras atribuídas</div></div><div class="hemicycle-wrap">${createHemicycle(cam.officialSeats||[],cam.seatsTotal||513)}</div><div class="seat-legend">${(cam.officialSeats||[]).slice(0,14).map(x=>`<span><i class="legend-dot" style="display:inline-block;background:${hashColor(x.sigla)}"></i> ${esc(x.sigla)} ${x.seats}</span>`).join('')}</div></section>
+    <section class="card hemi-card"><div class="section-head"><div><div class="eyebrow">Câmara dos Deputados</div><div class="section-title">Hemiciclo · TSE agora</div></div><div class="section-note">${seats} de ${cam.seatsTotal||513} cadeiras atribuídas</div></div><div class="hemicycle-wrap">${createHemicycle(cam.officialSeats||[],cam.seatsTotal||513)}</div><div class="seat-legend">${(cam.officialSeats||[]).slice(0,14).map(x=>`<span><i class="legend-dot" style="display:inline-block;background:${politicalFill(x.sigla)}"></i> ${esc(x.sigla)} ${x.seats}</span>`).join('')}</div></section>
     <aside class="congress-side"><div class="card metric-card"><div class="metric-label">Cadeiras Câmara</div><div class="metric-value">${seats}<span style="font-size:14px;color:var(--muted)"> / ${cam.seatsTotal||513}</span></div><div class="metric-foot">campo vag agregado das 27 UFs</div></div><div class="card metric-card"><div class="metric-label">Senadores oficiais em 2026</div><div class="metric-value">${sen.officialCount||0}<span style="font-size:14px;color:var(--muted)"> / 54</span></div><div class="metric-foot">2 vagas por UF</div></div><div class="card metric-card"><div class="metric-label">Seções/urnas totalizadas</div><div class="metric-value" style="font-size:20px">${fmt(cam.sectionsDone||0)} <span style="font-size:12px;color:var(--muted)">/ ${fmt(cam.sectionsTotal||0)}</span></div><div class="metric-foot">${pct(cam.pctSections||cam.pctAverage||0)} no agregado nacional</div></div><div class="card pad"><div class="eyebrow">Cadeiras por grupo</div><div class="section-title">Distribuição atual</div><div style="margin-top:12px">${bars(cam.officialSeats||[])}</div></div></aside>
   </div>
   <section class="section"><div class="section-head"><div><div class="eyebrow">Senado Federal</div><div class="section-title">Duas vagas por UF</div></div><div class="section-note">“líder” só vira “eleito TSE” quando o arquivo oficial indicar</div></div><div class="senate-grid">${renderSenateGrid(sen)}</div></section>
@@ -958,9 +1020,11 @@ function electedCandidateCard(c,{cargo='',uf='',kind='official',status='',reason
   const reasonText=reason==='QP'?'QP':/média/.test(String(reason))?'sobra/média':'';
   const shownStatus=status||(kind==='official'?'ELEITO TSE':'PROJETADO ELEITO · cálculo atual');
   const visual=visualClassFromStatus(shownStatus,kind);
-  return `<div class="elected-candidate-card${visual}" data-candidate-name="${esc(c.nome)}" data-candidate-party="${esc(c.partido||'')}" data-candidate-federation="${esc(c.federacao||'')}">
+  const pColor=partyColor(c.partido||'');
+  return `<div class="elected-candidate-card${visual}" style="--party-color:${pColor}" data-candidate-name="${esc(c.nome)}" data-candidate-party="${esc(c.partido||'')}" data-candidate-federation="${esc(c.federacao||'')}">
     ${avatar(c)}
-    <div class="elected-candidate-main"><div class="result-context">${esc(CARGO[String(cargo||c.cargoCodigo)]||'Candidato')} · ${esc(uf||c.uf||'')}</div><div class="cand-name">${esc(c.nome)}</div><div class="cand-meta">${esc(c.numero)} · ${esc(c.partido)} · ${fmt(c.votos)} votos</div>
+    <div class="elected-candidate-main"><div class="result-context">${esc(CARGO[String(cargo||c.cargoCodigo)]||'Candidato')} · ${esc(uf||c.uf||'')}</div><div class="cand-name">${esc(c.nome)}</div><div class="cand-meta">${esc(c.numero)} · ${fmt(c.votos)} votos</div>
+      <div class="elected-card-tags"><span class="elected-party-chip"><i></i>${esc(c.partido||'Partido')}</span>${c.federacao?`<span class="elected-federation-chip">${esc(c.federacao)}</span>`:''}</div>
       ${electedStatusBadge(kind,shownStatus)}${reasonText?`<span class="reason-badge">${esc(reasonText)}</span>`:''}
     </div>
     <div class="elected-candidate-side">${favoriteButton(fav)}<strong>${pct(c.pct||0)}</strong></div>
@@ -1093,10 +1157,10 @@ function enhanceDeputyElectedView(){
         <button type="button" class="seg ${chartMode==='group'?'active':''}" data-chart-mode="group">Partido/Federação</button>
       </div>
       <div class="deputy-party-chart">
-        ${distribution.map((x,i)=>`<button type="button" class="deputy-party-row${i>=10?' is-extra':''}" data-party-bar="${esc(x.label)}" data-chart-mode="${chartMode}" aria-label="Filtrar por ${esc(x.label)}">
+        ${distribution.map((x,i)=>`<button type="button" class="deputy-party-row${i>=10?' is-extra':''}" style="--political-color:${politicalColor(x.label)}" data-party-bar="${esc(x.label)}" data-chart-mode="${chartMode}" aria-label="Filtrar por ${esc(x.label)}">
           <span class="deputy-party-rank">${i+1}</span>
-          <strong title="${esc(x.label)}">${esc(x.label)}</strong>
-          <span class="deputy-party-track"><i style="width:${(x.seats/max*100).toFixed(2)}%;background:${hashColor(x.label)}"></i></span>
+          <strong title="${esc(x.label)}"><i class="party-color-dot" style="background:${politicalFill(x.label)}"></i><span>${esc(x.label)}</span></strong>
+          <span class="deputy-party-track"><i style="width:${(x.seats/max*100).toFixed(2)}%;background:${politicalFill(x.label)}"></i></span>
           <b>${fmt(x.seats)}</b>
         </button>`).join('')}
       </div>
