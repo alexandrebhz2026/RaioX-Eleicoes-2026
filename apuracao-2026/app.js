@@ -217,12 +217,18 @@ function electionAlert(r,cargo){
   if((r?.pctTotalizado||0)===0)return '<div class="alert waiting">Aguardando o início da totalização. Candidatos e vagas já estão carregados; votos, QE e cadeiras surgirão conforme o TSE publicar.</div>';
   return `<div class="alert waiting">Apuração parcial do TSE: <strong>${pct(r.pctTotalizado)}</strong> das seções totalizadas. “Liderando” não significa eleito.</div>`;
 }
+function candidateCardState(c,r,cargo,index){
+  const oi=officialInfo(c,r,cargo,index);
+  const label=String(oi?.label||c.situacaoOficial||'').toLowerCase();
+  const elected=!!oi?.official&&(/eleit/.test(label)||c.eleitoTse===true||String(c.e||'').toLowerCase()==='s')&&!/não|nao|suplente|2.?\s*turno|segundo turno/.test(label);
+  const runoff=!!oi?.official&&/2.?\s*turno|segundo turno/.test(label);
+  return{oi,elected,runoff};
+}
 function candidateRow(c,r,cargo,index,opts={}){
-  const oi=officialInfo(c,r,cargo,index),fav=candidateForFavorite(c,r,cargo);
+  const state=candidateCardState(c,r,cargo,index),oi=state.oi,fav=candidateForFavorite(c,r,cargo);
   const deputy=['6','7','8'].includes(String(cargo));
-  const officialElected=deputy&&!!oi?.official&&/eleit/i.test(String(oi.label||''))&&!/não|nao|suplente|2.? ?turno/i.test(String(oi.label||''));
-  const projected=deputy&&!!opts.projected&&!officialElected;
-  const rowClass=officialElected?' candidate-official-elected':projected?' candidate-projected-elected':'';
+  const projected=deputy&&!!opts.projected&&!state.elected;
+  const rowClass=state.elected?' candidate-official-elected':state.runoff?' candidate-official-runoff':projected?' candidate-projected-elected':'';
   const projectionBadge=projected?'<span class="projection-badge">Projetado eleito · cálculo atual</span>':'';
   return `<div class="candidate-row${rowClass}">
     <div class="rank">${index+1}º</div>${avatar(c)}
@@ -249,7 +255,11 @@ function orderedCandidates(r){
 function renderLeaderCards(r,cargo,limit=2){
   if((r?.pctTotalizado||0)===0)return `<div class="empty">Aguardando votos · ${(r?.candidatos||[]).length} candidaturas carregadas.</div>`;
   const cs=orderedCandidates(r).slice(0,limit);
-  return cs.map((c,i)=>{const oi=officialInfo(c,r,cargo,i),fav=candidateForFavorite(c,r,cargo);return `<div class="leader-card">${avatar(c)}<div><div class="cand-name">${esc(c.nome)}</div><div class="cand-meta">${esc(c.numero)} · ${esc(c.partido)} · ${fmt(c.votos)} votos</div>${oi?`<span class="${oi.cls}">${esc(oi.label)}</span>`:''}</div><div class="leader-side">${favoriteButton(fav)}<div class="cand-pct">${pct(c.pct)}</div></div></div>`}).join('')||'<div class="empty">Aguardando candidatos.</div>';
+  return cs.map((c,i)=>{
+    const state=candidateCardState(c,r,cargo,i),oi=state.oi,fav=candidateForFavorite(c,r,cargo);
+    const cls=state.elected?' leader-official-elected':state.runoff?' leader-official-runoff':'';
+    return `<div class="leader-card${cls}">${avatar(c)}<div><div class="cand-name">${esc(c.nome)}</div><div class="cand-meta">${esc(c.numero)} · ${esc(c.partido)} · ${fmt(c.votos)} votos</div>${oi?`<span class="${oi.cls}">${esc(oi.label)}</span>`:''}</div><div class="leader-side">${favoriteButton(fav)}<div class="cand-pct">${pct(c.pct)}</div></div></div>`;
+  }).join('')||'<div class="empty">Aguardando candidatos.</div>';
 }
 function recordPresident(r){
   if(!(r.pctTotalizado>0))return;
