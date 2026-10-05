@@ -621,3 +621,21 @@ body,.appbar,.appbar-in,.shell,.view,.section,.page-head,.card,.congress-top,.co
   .deputy-chart-tabs{display:grid;grid-template-columns:1fr 1fr}
   .deputy-chart-tabs .seg{width:100%}
 }
+
+
+/* Partidos: identidade visual institucional v5.16 */
+.elected-candidate-card{border-left-width:4px;border-left-color:var(--party-color,var(--border))}
+.elected-card-tags{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:5px 0 4px}
+.elected-party-chip,.elected-federation-chip{display:inline-flex;align-items:center;gap:5px;max-width:100%;padding:3px 7px;border-radius:999px;font-size:8px;font-weight:900;line-height:1.1}
+.elected-party-chip{color:var(--party-color,var(--text));border:1px solid color-mix(in srgb,var(--party-color) 35%,var(--border));background:color-mix(in srgb,var(--party-color) 9%,var(--surface))}
+.elected-party-chip>i{width:7px;height:7px;flex:0 0 7px;border-radius:999px;background:var(--party-color)}
+.elected-federation-chip{color:var(--muted);border:1px solid var(--border);background:var(--surface);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.deputy-party-row>strong{display:flex;align-items:center;gap:6px;min-width:0}
+.deputy-party-row>strong>span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.party-color-dot{width:9px;height:9px;flex:0 0 9px;border-radius:999px;border:1px solid color-mix(in srgb,var(--text) 12%,transparent)}
+.deputy-party-row.active{box-shadow:inset 3px 0 0 var(--political-color,var(--accent))}
+@media(max-width:520px){
+  .elected-card-tags{gap:4px}
+  .elected-federation-chip{max-width:150px}
+  .party-color-dot{width:8px;height:8px;flex-basis:8px}
+}
