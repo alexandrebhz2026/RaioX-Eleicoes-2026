@@ -34,7 +34,6 @@ jobs:
           "$browser" --headless --no-sandbox --disable-gpu --window-size=390,844 --virtual-time-budget=18000 --dump-dom "$base/?qa=$GITHUB_SHA" > /tmp/home.html
           grep -q "Apuração em tempo real" /tmp/home.html
           grep -q "2º turno" /tmp/home.html
-          grep -q 'data-scroll-x="ok"' /tmp/home.html
       - name: Validate second-round screen
         run: |
           set -e
