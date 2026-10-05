@@ -55,6 +55,9 @@ jobs:
           grep -q "polls-2026.json" apuracao-2026/app.bundle.js
           grep -q "loadSecondRoundHome" apuracao-2026/app.bundle.js
           grep -q "renderSecondRoundPresident" apuracao-2026/app.bundle.js
+          grep -Fq "$('[data-open-president]').forEach" apuracao-2026/app.bundle.js || { echo "FAILED wireSecondRoundHome selector"; exit 1; }
+          grep -Fq "$('[data-president-mode]').forEach" apuracao-2026/app.bundle.js || { echo "FAILED wirePresidentModeTabs selector"; exit 1; }
+          grep -Fq "$('[data-round2-uf]').forEach" apuracao-2026/app.bundle.js || { echo "FAILED wireRound2GovernorCards selector"; exit 1; }
           if grep -Pq 'async[ \t]*\n[ \t]*function' apuracao-2026/app.bundle.js; then
             echo "FAILED: stray async before function declaration"
             exit 1
