@@ -1042,7 +1042,7 @@ function electedSection(title,subtitle,html,count=0){
   return `<section class="card elected-section"><div class="section-head"><div><div class="eyebrow">${esc(subtitle)}</div><div class="section-title">${esc(title)}</div></div><div class="section-note">${fmt(count)} resultado(s)</div></div><div class="elected-list">${html||'<div class="empty">Nenhum resultado neste filtro.</div>'}</div></section>`;
 }
 function wireElectedControls(){
-  $('[data-elected-mode]').forEach(b=>b.onclick=()=>{S.electedMode=b.dataset.electedMode;loadElected(false)});
+  $$('[data-elected-mode]').forEach(b=>b.onclick=()=>{S.electedMode=b.dataset.electedMode;loadElected(false)});
   $('#electedUf')?.addEventListener('change',e=>{S.electedUf=e.target.value;S.electedCargo='all';S.electedName='';S.electedParty='all';loadElected(false)});
   $('#electedCargo')?.addEventListener('change',e=>{S.electedCargo=e.target.value;S.electedName='';S.electedParty='all';loadElected(false)});
 }
