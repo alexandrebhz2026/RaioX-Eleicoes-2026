@@ -58,6 +58,10 @@ jobs:
           grep -q "candidate-projected-elected" apuracao-2026/app.bundle.js
           grep -q "Projetado eleito · cálculo atual" apuracao-2026/app.bundle.js
           grep -q "candidate-official-elected" apuracao-2026/app.css
+          grep -q "candidateCardState" apuracao-2026/app.bundle.js
+          grep -q "candidate-official-runoff" apuracao-2026/app.bundle.js
+          grep -q "leader-official-elected" apuracao-2026/app.bundle.js
+          grep -q "Official TSE card colors v5.5" apuracao-2026/app.css
           grep -q "pres-apuration-card" apuracao-2026/app.bundle.js
           grep -q "seções restantes" apuracao-2026/app.bundle.js
           grep -q "pres-apuration-track" apuracao-2026/app.css
