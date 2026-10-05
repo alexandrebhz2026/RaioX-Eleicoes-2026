@@ -658,19 +658,30 @@ function pollCard(p){
     <a class="poll-source-link" href="${esc(p.source)}" target="_blank" rel="noopener noreferrer">Abrir fonte ↗</a>
   </article>`;
 }
-function pollsPanel(data,{limit=0}={}){
-  const polls=(data?.polls||[]).filter(p=>p.scope===S.pollScope&&p.race==='presidente').sort((a,b)=>String(b.published).localeCompare(String(a.published)));
+function pollScopeTabs(){
+  return `<div class="poll-scope-tabs">
+    <button class="seg ${S.pollScope==='BR'?'active':''}" data-poll-scope="BR">Brasil</button>
+    <button class="seg ${S.pollScope==='MG'?'active':''}" data-poll-scope="MG">Minas Gerais</button>
+  </div>`;
+}
+function wirePollScope(){
+  $$('[data-poll-scope]').forEach(b=>b.onclick=()=>{S.pollScope=b.dataset.pollScope||'BR';S.presidentMode='polls';loadPresident(false)});
+}
+function pollsPanel(data,{limit=0,scope=S.pollScope}={}){
+  const polls=(data?.polls||[]).filter(p=>p.scope===scope&&p.race==='presidente').sort((a,b)=>String(b.published).localeCompare(String(a.published)));
   const shown=limit?polls.slice(0,limit):polls;
-  return `<div class="polls-head-note">Pesquisas são retratos do momento, não previsão de resultado. O app <strong>não calcula média própria</strong> entre institutos.</div>
+  const scopeName=scope==='MG'?'Minas Gerais':'Brasil';
+  return `<div class="polls-head-note"><strong>${esc(scopeName)}</strong> · pesquisas são retratos do momento, não previsão de resultado. O app <strong>não calcula média própria</strong> entre institutos nem mistura votos totais com votos válidos.</div>
     <div class="poll-grid">${shown.map(pollCard).join('')||'<div class="empty">Nenhuma pesquisa cadastrada neste recorte.</div>'}</div>`;
 }
 async function renderPollsPresident(host,r1,force=false){
   const data=await loadPollData(force);
   host.innerHTML=`<div class="page-head"><div><div class="eyebrow">2º turno 2026</div><h1 class="page-title">Pesquisas eleitorais</h1><div class="page-sub">Levantamentos de diferentes institutos, exibidos individualmente e com ficha técnica.</div></div><div class="source-pill">${(data.polls||[]).length} pesquisas cadastradas</div></div>
     ${presidentModeTabs('polls')}
+    ${pollScopeTabs()}
     <div class="card poll-context-card"><strong>Contexto</strong><span>${esc(data.note||'')}</span></div>
     ${pollsPanel(data)}`;
-  wirePresidentModeTabs();
+  wirePresidentModeTabs();wirePollScope();
 }
 function secondRoundFaceoffCard(c,r1,r2,index){
   const old=r1?.candidatos?.find(x=>String(x.numero)===String(c.numero));
@@ -733,7 +744,7 @@ async function renderSecondRoundPresident(host,r1,force=false){
       ${r2?electionAlert(r2,'1'):''}
     </section>
     <section class="section"><div class="section-head"><div><div class="eyebrow">Governadores</div><div class="section-title">Estados com 2º turno</div></div><div class="section-note">${round2GovernorStates(gov).length} UF(s)</div></div>${round2GovernorCards(gov)}</section>
-    <section class="section"><div class="section-head"><div><div class="eyebrow">Pesquisas</div><div class="section-title">Levantamentos recentes</div></div><button class="card-action" data-president-mode="polls">Ver todas <span>→</span></button></div>${pollData?pollsPanel(pollData,{limit:3}):'<div class="card empty">Pesquisas indisponíveis agora.</div>'}</section>`;
+    <section class="section"><div class="section-head"><div><div class="eyebrow">Pesquisas</div><div class="section-title">Levantamentos recentes</div></div><button class="card-action" data-president-mode="polls">Ver todas <span>→</span></button></div>${pollData?pollsPanel(pollData,{limit:3,scope:'BR'}):'<div class="card empty">Pesquisas indisponíveis agora.</div>'}</section>`;
   wirePresidentModeTabs();wireRound2GovernorCards();syncFavoriteButtons();wireFavorites(host);
 }
 
