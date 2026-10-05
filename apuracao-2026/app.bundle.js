@@ -1,4 +1,4 @@
-/* Apuracao 2026 browser bundle v5.5 */
+/* Apuracao 2026 browser bundle v5.6 */
 function tseInt(v){return Number(String(v??'0').replace(/\./g,'').replace(',','.'))||0}
 function tsePct(v){return Number(String(v??'0').replace(',','.'))||0}
 function roundQE(vv,seats){if(seats<=0)return 0;const raw=vv/seats,f=Math.floor(raw);return raw-f>0.5?f+1:f}
@@ -230,6 +230,9 @@ function officialInfo(c,r,cargo,index){
   if(c.eleitoTse||c.e){
     if((cargo==='1'||cargo==='3')&&r?.meta?.md==='s')return{label:'2º TURNO · TSE',cls:'official-badge',official:true};
     return{label:'ELEITO · TSE',cls:'official-badge',official:true};
+  }
+  if((cargo==='1'||cargo==='3')&&r?.meta?.md==='s'&&index<2){
+    return{label:'2º TURNO · TSE',cls:'official-badge',official:true};
   }
   if((r?.pctTotalizado||0)>0){
     if(cargo==='5'&&index<2)return{label:'Liderando',cls:'leader-badge',official:false};
@@ -734,10 +737,12 @@ function electedStatusBadge(kind,text){
 function electedCandidateCard(c,{cargo='',uf='',kind='official',status='',reason=''}={}){
   const fav=candidateForFavorite({...c,uf:uf||c.uf,cargoCodigo:cargo||c.cargoCodigo},null,cargo||c.cargoCodigo);
   const reasonText=reason==='QP'?'QP':/média/.test(String(reason))?'sobra/média':'';
-  return `<div class="elected-candidate-card">
+  const shownStatus=status||(kind==='official'?'ELEITO TSE':'PROJETADO ELEITO · cálculo atual');
+  const visual=visualClassFromStatus(shownStatus,kind);
+  return `<div class="elected-candidate-card${visual}">
     ${avatar(c)}
     <div class="elected-candidate-main"><div class="result-context">${esc(CARGO[String(cargo||c.cargoCodigo)]||'Candidato')} · ${esc(uf||c.uf||'')}</div><div class="cand-name">${esc(c.nome)}</div><div class="cand-meta">${esc(c.numero)} · ${esc(c.partido)} · ${fmt(c.votos)} votos</div>
-      ${electedStatusBadge(kind,status||(kind==='official'?'ELEITO TSE':'PROJETADO ELEITO · cálculo atual'))}${reasonText?`<span class="reason-badge">${esc(reasonText)}</span>`:''}
+      ${electedStatusBadge(kind,shownStatus)}${reasonText?`<span class="reason-badge">${esc(reasonText)}</span>`:''}
     </div>
     <div class="elected-candidate-side">${favoriteButton(fav)}<strong>${pct(c.pct||0)}</strong></div>
   </div>`;
@@ -921,12 +926,21 @@ function favoriteCargoCode(c){
   if(label.includes('estadual'))return '7';
   return '';
 }
+function visualClassFromStatus(status,kind=''){
+  const s=String(status||'').toLowerCase();
+  const negative=/não eleito|nao eleito|suplente|fora das vagas/.test(s);
+  const runoff=/2.?\s*turno|segundo turno/.test(s);
+  const elected=!negative&&(/eleito tse|eleito · tse|^eleito\b/.test(s));
+  const projected=/projetado eleito/.test(s)||(kind==='projection'&&!runoff&&!negative);
+  return elected?' official-card-green':runoff?' official-card-orange':projected?' projected-card-green':'';
+}
 function favoritePageCard(c){
   registerCandidate(c);
   const status=c.liveStatus||c.status||c.st||c.situacaoOficial||'';
   const delta=Number(c.deltaVotes||0),move=Number(c.rankChange||0),rank=Number(c.rank||0);
   const statusCls=/ELEITO TSE|2º TURNO TSE/i.test(status)?'official-badge':/PROJETADO ELEITO/i.test(status)?'projection-badge':/Liderando/i.test(status)?'leader-badge':/Não eleito|Suplente|Fora/i.test(status)?'supp-badge':'';
-  return `<div class="favorite-page-card favorite-live-card">
+  const visual=visualClassFromStatus(status,c.projected?'projection':'');
+  return `<div class="favorite-page-card favorite-live-card${visual}">
     ${avatar(c)}
     <div class="favorite-main"><div class="result-context">${esc(c.cargo||CARGO[favoriteCargoCode(c)]||'Candidato')} · ${esc(c.uf||'')}</div>
       <div class="cand-name">${esc(c.nome)}</div>
