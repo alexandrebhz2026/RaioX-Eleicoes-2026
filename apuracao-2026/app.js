@@ -688,7 +688,7 @@ function secondRoundFaceoffCard(c,r1,r2,index){
   const old=r1?.candidatos?.find(x=>String(x.numero)===String(c.numero));
   const state=r2?candidateCardState(c,r2,'1',index):{elected:false,runoff:true,oi:null};
   const id=presidentialIdentity(c);
-  const cls=state.elected?' official-card-green':state.runoff?' official-card-orange':'';
+  const cls=state.elected?' official-card-green':'';
   return `<article class="round2-candidate round2-candidate-${id.key}${cls}" style="--candidate-color:${id.color};--candidate-soft:${id.soft}">
     ${avatar(c,'large')}
     <div class="round2-candidate-main"><span class="result-context"><i class="candidate-color-dot"></i>${esc(c.numero)} · ${esc(c.partido)}</span><h3>${esc(c.nome)}</h3>
