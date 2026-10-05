@@ -538,3 +538,13 @@ body,.appbar,.appbar-in,.shell,.view,.section,.page-head,.card,.congress-top,.co
   .round2-candidate{grid-template-columns:58px minmax(0,1fr) 42px;padding:11px}.round2-candidate .avatar.large{width:58px;height:58px}.round2-candidate-main h3{font-size:14px}
   .round2-state-grid{grid-template-columns:1fr}.president-mode-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.president-mode-tabs .seg{padding:9px 7px}
 }
+
+/* Second round polls scopes v5.7 */
+.poll-scope-tabs{display:flex;gap:7px;margin:0 0 12px}
+.poll-scope-tabs .seg{border:1px solid var(--border);background:var(--surface2);color:var(--muted);padding:9px 13px;border-radius:999px;font-size:10px;font-weight:900}
+.poll-scope-tabs .seg.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.poll-context-card{align-items:flex-start}
+@media(max-width:520px){
+  .poll-scope-tabs{display:grid;grid-template-columns:1fr 1fr}
+  .poll-scope-tabs .seg{width:100%}
+}
