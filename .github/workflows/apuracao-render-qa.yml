@@ -57,6 +57,12 @@ jobs:
           grep -q "polls-2026.json" apuracao-2026/app.bundle.js
           grep -q "loadSecondRoundHome" apuracao-2026/app.bundle.js
           grep -q "renderSecondRoundPresident" apuracao-2026/app.bundle.js
+          grep -q "secondRoundStage" apuracao-2026/app.bundle.js
+          grep -q "pollScopeTabs(data)" apuracao-2026/app.bundle.js
+          grep -q "stateGovernorPolls" apuracao-2026/app.bundle.js
+          grep -q "AtlasIntel/Bloomberg" apuracao-2026/polls-2026.json
+          grep -q "Vox Brasil" apuracao-2026/polls-2026.json
+          grep -q "Real Time Big Data" apuracao-2026/polls-2026.json
           if grep -Pq 'async[ \t]*\n[ \t]*function' apuracao-2026/app.bundle.js; then
             echo "FAILED: stray async before function declaration"
             exit 1
