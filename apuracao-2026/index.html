@@ -10,29 +10,20 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
-<link rel="stylesheet" href="./app.css?v=5.18">
-<title>Apuração 2026 · Resultados TSE</title>
+<link rel="stylesheet" href="./app.css?v=5.20">
+<title>Apuração Presidencial 2026 · 2º Turno</title>
 <script>
   (()=>{const mark=()=>{const root=document.documentElement;root.dataset.scrollX=(root.scrollWidth<=root.clientWidth+1?'ok':'bad')};addEventListener('load',()=>{mark();let n=0;const t=setInterval(()=>{mark();if(++n>=30)clearInterval(t)},500)})})();
   </script>
 </head>
-<body>
+<body class="president-only">
 <header class="appbar">
   <div class="appbar-in">
     <button class="brand" aria-label="Ir para Agora">
       <span class="brand-mark">26</span>
-      <span class="brand-copy"><strong>Apuração 2026</strong><small>dados oficiais do TSE</small></span>
+      <span class="brand-copy"><strong>Presidente 2026</strong><small>2º turno · dados oficiais do TSE</small></span>
     </button>
-    <nav class="desktop-nav" aria-label="Navegação principal">
-      <button class="nav-btn active" data-view="agora">Agora</button>
-      <button class="nav-btn" data-view="presidente">Presidente</button>
-      <button class="nav-btn" data-view="estados">Estados</button>
-      <button class="nav-btn" data-view="congresso">Congresso</button>
-      <button class="nav-btn" data-view="eleitos">Eleitos</button>
-      <button class="nav-btn nav-with-badge" data-view="favoritos">Favoritos <span class="nav-badge hidden" data-fav-badge>0</span></button>
-      <button class="nav-btn" data-view="buscar">Buscar</button>
-      <button class="nav-btn" data-view="como">Como funciona</button>
-    </nav>
+    <div class="presidential-top-label"><span></span> APURAÇÃO PRESIDENCIAL · 2º TURNO</div>
     <div class="grow"></div>
     <div class="live-pill"><span class="live-dot"></span><span id="liveTime">TSE · conectando</span></div>
     <button id="refreshBtn" class="icon-btn" aria-label="Atualizar agora" title="Atualizar agora">↻</button>
@@ -40,32 +31,17 @@
   </div>
 </header>
 
-<main class="shell">
-  <section id="view-agora" class="view active"><div id="agoraContent"></div></section>
-  <section id="view-presidente" class="view"><div id="presidentContent"></div></section>
-  <section id="view-estados" class="view"><div id="stateContent"></div></section>
-  <section id="view-congresso" class="view"><div id="congressContent"></div></section>
-  <section id="view-eleitos" class="view"><div id="electedContent"></div></section>
-  <section id="view-favoritos" class="view"><div id="favoritesContent"></div></section>
-  <section id="view-buscar" class="view"><div id="searchContent"></div></section>
-  <section id="view-como" class="view"><div id="howContent"></div></section>
-  <div class="footer-note">Fonte: Tribunal Superior Eleitoral · Resultados podem mudar até a totalização final. Projeções do app são exibidas separadamente do status oficial.</div>
+<main class="shell presidential-shell">
+  <section id="view-presidente" class="view active"><div id="presidentContent"></div></section>
+  <div class="footer-note">Fonte: Tribunal Superior Eleitoral · Apuração oficial da eleição para Presidente da República.</div>
 </main>
 
-<nav class="mobile-nav" aria-label="Navegação móvel">
-  <button class="active" data-view="agora"><span class="mi">●</span>Agora</button>
-  <button data-view="presidente"><span class="mi">◉</span>Presidente</button>
-  <button data-view="estados"><span class="mi">◇</span>Estados</button>
-  <button data-view="congresso"><span class="mi">⌂</span>Congresso</button>
-  <button data-view="eleitos"><span class="mi">✓</span>Eleitos</button>
-  <button class="mobile-fav-nav" data-view="favoritos"><span class="mi">★</span>Favoritos<span class="mobile-nav-badge hidden" data-fav-badge>0</span></button>
-  <button data-view="buscar"><span class="mi">⌕</span>Buscar</button>
-</nav>
+
 
 <script>
 window.__apFatal=function(err){
   var msg=(err&&err.message)?err.message:String(err||'Erro desconhecido');
-  var active=document.querySelector('.view.active > div')||document.getElementById('agoraContent');
+  var active=document.getElementById('presidentContent');
   if(active)active.innerHTML='<div class="card pad" style="margin-top:18px"><div class="alert danger"><strong>Falha ao iniciar o painel.</strong><br>'+String(msg).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})+'<br><button class="primary-btn" style="margin-top:10px" onclick="location.reload()">Recarregar</button></div></div>';
 };
 window.addEventListener('error',function(e){window.__apFatal(e.error||e.message)});
@@ -75,7 +51,6 @@ if('serviceWorker' in navigator){
 }
 if('caches' in window){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k)})}).catch(function(){})}
 </script>
-<script src="./brmap.js?v=4.9"></script>
-<script defer src="./app.bundle.js?v=5.19"></script>
+<script defer src="./app.bundle.js?v=5.20"></script>
 </body>
 </html>
