@@ -1,4 +1,4 @@
-/* Apuracao 2026 browser bundle v5.18 */
+/* Apuracao 2026 browser bundle v5.19 */
 function tseInt(v){return Number(String(v??'0').replace(/\./g,'').replace(',','.'))||0}
 function tsePct(v){return Number(String(v??'0').replace(',','.'))||0}
 function roundQE(vv,seats){if(seats<=0)return 0;const raw=vv/seats,f=Math.floor(raw);return raw-f>0.5?f+1:f}
@@ -431,7 +431,7 @@ async function loadAgora(force=false){
   const gov=S.governors||{states:[]};
   recordPresident(pres);
   if(S.governors)recordMajorEvents(pres,gov);
-  if(S.codes.fed2&&Date.now()>=ROUND2_ELECTION_DAY.getTime()){await loadSecondRoundHome(host,force);return}
+  if(S.codes.fed2&&Date.now()>=ROUND2_VOTING_START.getTime()){await loadSecondRoundHome(host,force);return}
   const official=officialSelected(pres,'1');
   const defined=pres.meta.md==='e'?'Eleito definido':pres.meta.md==='s'?'2º turno definido':pres.meta.tf==='s'?'Final':'Em apuração';
   const govDefined=(gov?.states||[]).filter(x=>x.md==='e'||x.md==='s'||x.tf==='s').length;
