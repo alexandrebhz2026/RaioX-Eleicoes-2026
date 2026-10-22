@@ -1,4 +1,4 @@
-/* Apuracao 2026 browser bundle v5.20 */
+/* Apuracao 2026 browser bundle v5.21 */
 function tseInt(v){return Number(String(v??'0').replace(/\./g,'').replace(',','.'))||0}
 function tsePct(v){return Number(String(v??'0').replace(',','.'))||0}
 function roundQE(vv,seats){if(seats<=0)return 0;const raw=vv/seats,f=Math.floor(raw);return raw-f>0.5?f+1:f}
@@ -717,7 +717,7 @@ function firstRoundRunoffCandidates(r){
 }
 async function loadPollData(force=false){
   if(S.pollData&&!force)return S.pollData;
-  const r=await fetch(`./polls-2026.json?v=${force?Date.now():'1'}`,{cache:force?'no-store':'default'});
+  const r=await fetch(`./polls-2026.json?v=${Date.now()}`,{cache:'no-store'});
   if(!r.ok)throw new Error('Não foi possível carregar pesquisas');
   S.pollData=await r.json();
   return S.pollData;
@@ -770,7 +770,7 @@ function pollsPanel(data,{limit=0,scope=S.pollScope}={}){
 }
 async function renderPollsPresident(host,r1,force=false){
   const data=await loadPollData(force);
-  host.innerHTML=`<div class="page-head"><div><div class="eyebrow">2º turno 2026</div><h1 class="page-title">Pesquisas eleitorais</h1><div class="page-sub">Levantamentos de diferentes institutos, exibidos individualmente e com ficha técnica.</div></div><div class="source-pill">${(data.polls||[]).length} pesquisas cadastradas</div></div>
+  host.innerHTML=`<div class="page-head"><div><div class="eyebrow">2º turno 2026</div><h1 class="page-title">Pesquisas eleitorais</h1><div class="page-sub">Levantamentos de diferentes institutos, exibidos individualmente e com ficha técnica.</div></div><div class="source-pill">${(data.polls||[]).length} pesquisas · atualizado ${data.updatedAt?new Date(data.updatedAt).toLocaleDateString('pt-BR'):'agora'}</div></div>
     ${presidentModeTabs('polls')}
     ${pollScopeTabs(data)}
     <div class="card poll-context-card"><strong>Contexto</strong><span>${esc(data.note||'')}</span></div>
@@ -827,7 +827,7 @@ async function renderSecondRoundPresident(host,r1,force=false){
   if(S.codes.fed2){try{r2=await fetchResult('1','BR',force,2)}catch{}}
   const candidates=r2?.candidatos?.slice(0,2)||firstRoundRunoffCandidates(r1);
   const countdown=secondRoundStage(),diff=r2?round2Difference(r2):null;
-  const pollData=await loadPollData(false).catch(()=>null);
+  const pollData=await loadPollData(force).catch(()=>null);
   const govLoaded=(gov?.states||[]).length>0;
   host.innerHTML=`<div class="page-head"><div><div class="eyebrow">Brasil · 2º turno</div><h1 class="page-title">Apuração Presidencial 2026</h1><div class="page-sub">${r2?'Apuração oficial do 2º turno em tempo real.':'Confronto definido pelo TSE · votação em 25/10/2026.'}</div></div><div class="round2-countdown"><span>${r2?'Apuração do 2º turno':countdown.label}</span><strong>${r2?pct(r2.pctTotalizado):countdown.short}</strong></div></div>
     ${presidentModeTabs('round2')}
