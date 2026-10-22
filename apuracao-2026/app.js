@@ -9,7 +9,7 @@ const COLORS=['#7c3aed','#2563eb','#0891b2','#0f9f6e','#d97706','#db2777','#4f46
 const S={
   codes:{fed:'6257',est:'6259',fed2:null,est2:null},view:'agora',uf:'MG',cargo:'3',cache:new Map(),governors:null,
   congress:{camara:null,senado:null},poll:null,loading:new Set(),lastRefresh:null,candidateIndex:new Map(),electedMode:'official',electedUf:'MG',electedCargo:'all',electedName:'',electedParty:'all',electedChartMode:'party',stateDeputyName:'',stateDeputyParty:'all',
-  presidentMode:'auto',pollData:null,pollScope:'BR',round2Ready:false
+  presidentMode:'round2',pollData:null,pollScope:'BR',round2Ready:false
 };
 const API_BASE=location.hostname.endsWith('.vercel.app')?'':'https://apuracao-2026-lake.vercel.app';
 const apiUrl=path=>API_BASE+path;
@@ -656,9 +656,9 @@ const ROUND2_VOTING_START=new Date('2026-10-25T08:00:00-03:00');
 const ROUND2_APURATION_START=new Date('2026-10-25T17:00:00-03:00');
 function presidentModeTabs(active){
   return `<div class="president-mode-tabs">
-    <button class="seg ${active==='round1'?'active':''}" data-president-mode="round1">1º turno</button>
     <button class="seg ${active==='round2'?'active':''}" data-president-mode="round2">2º turno</button>
     <button class="seg ${active==='polls'?'active':''}" data-president-mode="polls">Pesquisas</button>
+    <button class="seg ${active==='round1'?'active':''}" data-president-mode="round1">1º turno</button>
   </div>`;
 }
 function wirePresidentModeTabs(){
@@ -798,25 +798,18 @@ async function renderSecondRoundPresident(host,r1,force=false){
   const countdown=secondRoundStage(),diff=r2?round2Difference(r2):null;
   const pollData=await loadPollData(false).catch(()=>null);
   const govLoaded=(gov?.states||[]).length>0;
-  host.innerHTML=`<div class="page-head"><div><div class="eyebrow">Brasil · 2º turno</div><h1 class="page-title">Presidente da República</h1><div class="page-sub">${r2?'Apuração oficial do 2º turno em tempo real.':'Confronto definido pelo TSE · votação em 25/10/2026.'}</div></div><div class="round2-countdown"><span>${r2?'Apuração do 2º turno':countdown.label}</span><strong>${r2?pct(r2.pctTotalizado):countdown.short}</strong></div></div>
+  host.innerHTML=`<div class="page-head"><div><div class="eyebrow">Brasil · 2º turno</div><h1 class="page-title">Apuração Presidencial 2026</h1><div class="page-sub">${r2?'Apuração oficial do 2º turno em tempo real.':'Confronto definido pelo TSE · votação em 25/10/2026.'}</div></div><div class="round2-countdown"><span>${r2?'Apuração do 2º turno':countdown.label}</span><strong>${r2?pct(r2.pctTotalizado):countdown.short}</strong></div></div>
     ${presidentModeTabs('round2')}
     <section class="card round2-hero">
-      <div class="section-head"><div><div class="eyebrow">${r2?'TSE · 2º turno':'Confronto presidencial'}</div><div class="section-title">${r2?'Apuração ao vivo':'Classificados pelo TSE'}</div></div><div class="section-note">${S.codes.fed2?'código TSE do 2º turno detectado':'aguardando código TSE do 2º turno'}</div></div>
+      <div class="section-head"><div><div class="eyebrow">${r2?'TSE · 2º turno':'Confronto presidencial'}</div><div class="section-title">${r2?'Placar oficial do 2º turno':'Lula × Flávio Bolsonaro'}</div></div><div class="section-note">${S.codes.fed2?'código TSE do 2º turno detectado':'aguardando código TSE do 2º turno'}</div></div>
       ${r2?sectionsBadge(r2):'<div class="round2-prep-note">O app continuará consultando a configuração oficial do TSE. Assim que o pleito de 2º turno aparecer, passa a usar o novo arquivo sem perder o histórico do 1º turno.</div>'}
       <div class="round2-faceoff">${candidates.map((c,i)=>secondRoundFaceoffCard(c,r1,r2,i)).join('')}</div>
       ${diff?(()=>{const id=presidentialIdentity(diff.leader);return `<div class="round2-difference" style="--candidate-color:${id.color}"><span>Diferença agora</span><strong><i class="candidate-color-dot"></i>${fmt(diff.votes)} votos</strong><small>${esc(diff.leader.nome)} à frente · ${pct(diff.pctGap)} p.p. · liderança não significa resultado oficial</small></div>`})():''}
       ${r2?electionAlert(r2,'1'):''}
     </section>
-    <section class="section"><div class="section-head"><div><div class="eyebrow">Governadores</div><div class="section-title">Estados com 2º turno</div></div><div class="section-note">${govLoaded?round2GovernorStates(gov).length+' UF(s)':'carregando estados…'}</div></div>${govLoaded?round2GovernorCards(gov):'<div class="card empty">Carregando confrontos estaduais em segundo plano…</div>'}</section>
     <section class="section"><div class="section-head"><div><div class="eyebrow">Pesquisas</div><div class="section-title">Levantamentos recentes</div></div><button class="card-action" data-president-mode="polls">Ver todas <span>→</span></button></div>${pollData?pollsPanel(pollData,{limit:3,scope:'BR'}):'<div class="card empty">Pesquisas indisponíveis agora.</div>'}</section>`;
   wirePresidentModeTabs();wireRound2GovernorCards();syncFavoriteButtons();wireFavorites(host);
 
-  if((!S.governors||force)&&S.view==='presidente'&&S.presidentMode==='round2'){
-    governorSummaryClient(force).then(fresh=>{
-      S.governors=fresh;
-      if(S.view==='presidente'&&S.presidentMode==='round2')renderSecondRoundPresident(host,r1,false);
-    }).catch(()=>{});
-  }
 }
 async function loadPresident(force=false){
   const host=$('#presidentContent');
@@ -1647,14 +1640,14 @@ async function boot(){
   $('#themeBtn').onclick=()=>setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
   $('#refreshBtn').onclick=()=>loadView(S.view,true);
   $$('[data-view]').forEach(b=>b.onclick=()=>showView(b.dataset.view));
-  $('.brand').onclick=()=>showView('agora');
+  $('.brand').onclick=()=>{S.presidentMode='round2';showView('presidente')};
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')loadView(S.view,true)});
   const qs=new URLSearchParams(location.search);
   const requestedView=qs.get('view');
   const requestedMode=qs.get('mode');
   if(['auto','round1','round2','polls'].includes(requestedMode||''))S.presidentMode=requestedMode;
   updateFavoriteBadges();
-  const initialView=['agora','presidente','estados','congresso','eleitos','favoritos','buscar','como'].includes(requestedView||'')?requestedView:'agora';
+  const initialView='presidente';
   showView(initialView);
   discoverCodes().then(()=>{
     if(document.visibilityState==='visible'&&S.view===initialView)loadView(S.view,false);
