@@ -1,146 +1,146 @@
 {
-  "updatedAt": "2026-10-05T06:58:00-03:00",
-  "note": "Pesquisas de 2º turno são exibidas individualmente, com instituto, campo, amostra, margem de erro, registro no TSE e fonte. O app não calcula média própria. Até surgir levantamento pós-1º turno, os cards abaixo permanecem identificados como simulações realizadas antes do 1º turno.",
+  "updatedAt": "2026-10-22T08:10:00-03:00",
+  "note": "Somente pesquisas nacionais de 2º turno divulgadas após o 1º turno. Cada levantamento é exibido separadamente, com instituto, período de campo, amostra, margem de erro, registro no TSE, base do percentual e fonte. O app não calcula média própria.",
   "polls": [
     {
-      "id": "datafolha-br-0310",
-      "institute": "Datafolha",
+      "id": "poderdata-br-2210",
+      "institute": "PoderData",
       "scope": "BR",
       "race": "presidente",
-      "phase": "simulação pré-1º turno",
-      "published": "2026-10-03",
-      "fieldStart": "2026-10-02",
-      "fieldEnd": "2026-10-03",
-      "sample": 4006,
-      "margin": 2,
+      "phase": "pós-1º turno",
+      "published": "2026-10-22",
+      "fieldStart": "2026-10-19",
+      "fieldEnd": "2026-10-21",
+      "sample": 4000,
+      "margin": 1.6,
       "confidence": 95,
-      "registration": "BR-01708/2026",
+      "registration": "BR-07926/2026",
       "basis": "votos totais",
       "candidates": [
         {
+          "name": "Flávio Bolsonaro",
+          "party": "PL",
+          "value": 49
+        },
+        {
           "name": "Lula",
           "party": "PT",
-          "value": 47
-        },
+          "value": 48
+        }
+      ],
+      "blankNull": 3,
+      "undecided": 1,
+      "source": "https://noticias.uol.com.br/eleicoes/2026/10/22/poderdata-22-de-outubro.ghtm"
+    },
+    {
+      "id": "palver-br-2110",
+      "institute": "Palver",
+      "scope": "BR",
+      "race": "presidente",
+      "phase": "pós-1º turno",
+      "published": "2026-10-21",
+      "fieldStart": "2026-10-18",
+      "fieldEnd": "2026-10-20",
+      "sample": 5000,
+      "margin": 2.4,
+      "confidence": 95,
+      "registration": "BR-04612/2026",
+      "basis": "votos totais",
+      "candidates": [
         {
           "name": "Flávio Bolsonaro",
           "party": "PL",
+          "value": 50
+        },
+        {
+          "name": "Lula",
+          "party": "PT",
+          "value": 48
+        }
+      ],
+      "blankNull": 1,
+      "undecided": 0,
+      "source": "https://noticias.uol.com.br/eleicoes/2026/10/21/palver-pesquisa-presidencial-segundo-turno-21-de-outubro.ghtm"
+    },
+    {
+      "id": "ideia-br-2110",
+      "institute": "Meio/IDEIA",
+      "scope": "BR",
+      "race": "presidente",
+      "phase": "pós-1º turno",
+      "published": "2026-10-21",
+      "fieldStart": "2026-10-15",
+      "fieldEnd": "2026-10-19",
+      "sample": 1500,
+      "margin": 2.5,
+      "confidence": 95,
+      "registration": "BR-08251/2026",
+      "basis": "votos totais",
+      "candidates": [
+        {
+          "name": "Flávio Bolsonaro",
+          "party": "PL",
+          "value": 48
+        },
+        {
+          "name": "Lula",
+          "party": "PT",
           "value": 46
         }
       ],
-      "blankNull": null,
-      "undecided": null,
-      "source": "https://www1.folha.uol.com.br/poder/2026/10/datafolha-lula-lidera-entre-mais-jovens-e-mais-velhos-no-1o-turno-e-flavio-bolsonaro-entre-os-mais-ricos.shtml"
+      "blankNull": 3.4,
+      "undecided": 2.6,
+      "source": "https://noticias.uol.com.br/eleicoes/2026/10/21/meioideia-pesquisa-lula-flavio-bolsonaro-eleicoes-presidenciais.ghtm"
     },
     {
-      "id": "quaest-br-0310",
+      "id": "quaest-br-2110",
       "institute": "Quaest",
       "scope": "BR",
       "race": "presidente",
-      "phase": "simulação pré-1º turno",
-      "published": "2026-10-03",
-      "fieldStart": "2026-10-02",
-      "fieldEnd": "2026-10-03",
-      "sample": 3702,
+      "phase": "pós-1º turno",
+      "published": "2026-10-21",
+      "fieldStart": "2026-10-17",
+      "fieldEnd": "2026-10-20",
+      "sample": 2154,
       "margin": 2,
       "confidence": 95,
-      "registration": "BR-02197/2026",
+      "registration": "BR-08535/2026",
       "basis": "votos totais",
       "candidates": [
         {
           "name": "Flávio Bolsonaro",
           "party": "PL",
+          "value": 45
+        },
+        {
+          "name": "Lula",
+          "party": "PT",
           "value": 44
-        },
-        {
-          "name": "Lula",
-          "party": "PT",
-          "value": 42
         }
       ],
-      "blankNull": 13,
-      "undecided": 1,
-      "source": "https://www.cnnbrasil.com.br/eleicoes/quaest-2-turno/"
+      "blankNull": 9,
+      "undecided": 2,
+      "source": "https://noticias.uol.com.br/eleicoes/2026/10/21/pesquisa-eleitoral-quaest-veja-os-resultados-do-segundo-turno-de-2026.ghtm"
     },
     {
-      "id": "atlas-br-2909",
-      "institute": "AtlasIntel/Bloomberg",
-      "scope": "BR",
-      "race": "presidente",
-      "phase": "simulação pré-1º turno",
-      "published": "2026-09-29",
-      "fieldStart": "2026-09-23",
-      "fieldEnd": "2026-09-28",
-      "sample": 5005,
-      "margin": 1,
-      "confidence": 95,
-      "registration": "BR-04391/2026",
-      "basis": "votos totais",
-      "candidates": [
-        {
-          "name": "Flávio Bolsonaro",
-          "party": "PL",
-          "value": 47.7
-        },
-        {
-          "name": "Lula",
-          "party": "PT",
-          "value": 47.6
-        }
-      ],
-      "blankNull": null,
-      "undecided": null,
-      "source": "https://www.cnnbrasil.com.br/eleicoes/atlas-flavio-tem-477-das-intencoes-de-voto-no-2o-turno-lula-476/"
-    },
-    {
-      "id": "vox-br-0210",
-      "institute": "Vox Brasil",
-      "scope": "BR",
-      "race": "presidente",
-      "phase": "simulação pré-1º turno",
-      "published": "2026-10-02",
-      "fieldStart": "2026-09-29",
-      "fieldEnd": "2026-10-01",
-      "sample": 2100,
-      "margin": 2.15,
-      "confidence": 95,
-      "registration": "BR-00148/2026",
-      "basis": "votos totais",
-      "candidates": [
-        {
-          "name": "Flávio Bolsonaro",
-          "party": "PL",
-          "value": 48.2
-        },
-        {
-          "name": "Lula",
-          "party": "PT",
-          "value": 45.2
-        }
-      ],
-      "blankNull": 2.5,
-      "undecided": 4.1,
-      "source": "https://www.cnnbrasil.com.br/eleicoes/vox-flavio-registra-482-no-2o-turno-lula-452/"
-    },
-    {
-      "id": "realtime-br-0110",
+      "id": "realtime-br-2010",
       "institute": "Real Time Big Data",
       "scope": "BR",
       "race": "presidente",
-      "phase": "simulação pré-1º turno",
-      "published": "2026-10-01",
-      "fieldStart": "2026-09-26",
-      "fieldEnd": "2026-09-30",
+      "phase": "pós-1º turno",
+      "published": "2026-10-20",
+      "fieldStart": "2026-10-15",
+      "fieldEnd": "2026-10-19",
       "sample": 2000,
       "margin": 2,
       "confidence": 95,
-      "registration": "BR-09503/2026",
+      "registration": "BR-02952/2026",
       "basis": "votos totais",
       "candidates": [
         {
           "name": "Flávio Bolsonaro",
           "party": "PL",
-          "value": 46
+          "value": 48
         },
         {
           "name": "Lula",
@@ -149,8 +149,68 @@
         }
       ],
       "blankNull": 5,
-      "undecided": 4,
-      "source": "https://www.cnnbrasil.com.br/eleicoes/real-time-big-data-flavio-tem-46-no-2o-turno-lula-45/"
+      "undecided": 2,
+      "source": "https://noticias.uol.com.br/eleicoes/2026/10/20/realtime-big-data-flavio-tem-com-52-dos-votos-validos-e-lula-48.ghtm"
+    },
+    {
+      "id": "atlas-br-1910",
+      "institute": "AtlasIntel/Bloomberg",
+      "scope": "BR",
+      "race": "presidente",
+      "phase": "pós-1º turno",
+      "published": "2026-10-19",
+      "fieldStart": "2026-10-13",
+      "fieldEnd": "2026-10-18",
+      "sample": 4998,
+      "margin": 1,
+      "confidence": 95,
+      "registration": "BR-02418/2026",
+      "basis": "votos totais",
+      "candidates": [
+        {
+          "name": "Flávio Bolsonaro",
+          "party": "PL",
+          "value": 49.8
+        },
+        {
+          "name": "Lula",
+          "party": "PT",
+          "value": 47.6
+        }
+      ],
+      "blankNull": 2.6,
+      "undecided": null,
+      "source": "https://noticias.uol.com.br/ultimas-noticias/agencia-estado/2026/10/19/na-pesquisa-atlasbloomberg-flavio-tem-498-contra-476-de-lula-diferenca-tambem-cai.amp.htm"
+    },
+    {
+      "id": "nexus-br-1910",
+      "institute": "BTG/Nexus",
+      "scope": "BR",
+      "race": "presidente",
+      "phase": "pós-1º turno",
+      "published": "2026-10-19",
+      "fieldStart": "2026-10-16",
+      "fieldEnd": "2026-10-18",
+      "sample": 2002,
+      "margin": 2,
+      "confidence": 95,
+      "registration": "BR-04499/2026",
+      "basis": "votos totais",
+      "candidates": [
+        {
+          "name": "Flávio Bolsonaro",
+          "party": "PL",
+          "value": 46.5
+        },
+        {
+          "name": "Lula",
+          "party": "PT",
+          "value": 45.9
+        }
+      ],
+      "blankNull": 4.7,
+      "undecided": 2.9,
+      "source": "https://noticias.uol.com.br/eleicoes/2026/10/19/btgnexus-pesquisa-presidencial-segundo-turno.ghtm"
     }
   ]
 }
