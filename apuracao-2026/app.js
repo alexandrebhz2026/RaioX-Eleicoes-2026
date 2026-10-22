@@ -400,7 +400,7 @@ async function loadAgora(force=false){
   const gov=S.governors||{states:[]};
   recordPresident(pres);
   if(S.governors)recordMajorEvents(pres,gov);
-  if(S.codes.fed2&&Date.now()>=ROUND2_ELECTION_DAY.getTime()){await loadSecondRoundHome(host,force);return}
+  if(S.codes.fed2&&Date.now()>=ROUND2_VOTING_START.getTime()){await loadSecondRoundHome(host,force);return}
   const official=officialSelected(pres,'1');
   const defined=pres.meta.md==='e'?'Eleito definido':pres.meta.md==='s'?'2º turno definido':pres.meta.tf==='s'?'Final':'Em apuração';
   const govDefined=(gov?.states||[]).filter(x=>x.md==='e'||x.md==='s'||x.tf==='s').length;
