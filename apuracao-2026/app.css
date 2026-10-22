@@ -664,3 +664,52 @@ body,.appbar,.appbar-in,.shell,.view,.section,.page-head,.card,.congress-top,.co
   .state-deputy-filter-grid .deputy-search-wrap{grid-column:1/-1}
   .state-deputy-filter-grid .deputy-clear-btn{width:100%}
 }
+
+/* Presidential-only second-round focus v5.20 */
+.president-only .mobile-nav,.president-only .desktop-nav,.president-only .favorite-btn{display:none!important}
+.presidential-top-label{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:10px;font-weight:950;letter-spacing:.06em}
+.presidential-top-label>span{width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 4px rgba(239,68,68,.10)}
+.presidential-shell{max-width:1120px;padding-bottom:34px}
+.president-only #view-presidente{display:block!important}
+.president-only .footer-note{padding-bottom:8px}
+.president-only .page-title{font-size:34px}
+.president-only .president-mode-tabs{margin-bottom:16px}
+.president-only .president-mode-tabs .seg{flex:1;min-height:44px;font-size:11px}
+.president-only .president-mode-tabs .seg:first-child{font-size:12px}
+.president-only .round2-hero{padding:19px;border:1px solid color-mix(in srgb,var(--accent) 20%,var(--border));box-shadow:0 16px 34px rgba(20,16,36,.06)}
+.president-only .round2-hero>.section-head{margin-bottom:14px}
+.president-only .round2-hero .section-title{font-size:22px}
+.president-only .round2-prep-note{font-size:11px;padding:13px 14px}
+.president-only .round2-faceoff{gap:14px}
+.president-only .round2-candidate{min-height:138px;grid-template-columns:86px minmax(0,1fr);padding:18px}
+.president-only .round2-candidate .avatar.large{width:86px;height:86px}
+.president-only .round2-candidate-main h3{font-size:23px;margin:4px 0 8px}
+.president-only .round2-votes{font-size:11px}
+.president-only .round2-votes strong{font-size:18px}
+.president-only .round2-votes b{display:block;font-size:30px;line-height:1;margin-top:7px;color:var(--candidate-color,#7c3aed)}
+.president-only .round2-candidate-main>small{font-size:10px}
+.president-only .leader-badge,.president-only .official-badge{margin-top:9px}
+.president-only .round2-difference{margin-top:14px;padding:14px}
+.president-only .round2-difference strong{font-size:21px}
+.president-only .pres-apuration-card{min-width:250px}
+.president-only .section:has(.poll-grid){margin-top:20px}
+.president-only .poll-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:820px){
+  .presidential-top-label{display:none}
+  .presidential-shell{padding-bottom:24px}
+  .president-only .page-title{font-size:28px}
+  .president-only .page-head{gap:10px}
+  .president-only .round2-countdown{align-items:flex-start;width:100%}
+  .president-only .round2-faceoff{grid-template-columns:1fr}
+  .president-only .poll-grid{grid-template-columns:1fr}
+}
+@media(max-width:520px){
+  .president-only .appbar-in{height:64px}
+  .president-only .brand-copy strong{font-size:15px}
+  .president-only .round2-hero{padding:13px}
+  .president-only .round2-candidate{grid-template-columns:64px minmax(0,1fr);min-height:0;padding:13px}
+  .president-only .round2-candidate .avatar.large{width:64px;height:64px}
+  .president-only .round2-candidate-main h3{font-size:18px}
+  .president-only .round2-votes b{font-size:27px}
+  .president-only .president-mode-tabs{grid-template-columns:1.15fr 1fr 1fr}
+}
